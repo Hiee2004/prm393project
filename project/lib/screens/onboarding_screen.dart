@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project/core/routes/app_routes.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -8,186 +9,102 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _pageController = PageController();
-  int currentPage = 0;
+  final PageController _controller = PageController();
+  int _currentPage = 0;
 
-  final List<_OnboardingItem> pages = const [
+  static const _pages = [
     _OnboardingItem(
-      icon: Icons.checklist_rounded,
-      title: 'Plan Your Focus Tasks',
-      description:
-          'Choose the most important tasks at the beginning of the day and focus on them one by one.',
+      icon: Icons.checklist,
+      title: 'Plan tasks',
+      description: 'Create a list of tasks for your day.',
     ),
     _OnboardingItem(
-      icon: Icons.timer_outlined,
-      title: 'Stay Focused',
-      description:
-          'Start a focus session, avoid distractions and track your real working time.',
+      icon: Icons.timer,
+      title: 'Focus',
+      description: 'Use the timer to focus on one task.',
     ),
     _OnboardingItem(
-      icon: Icons.insights_rounded,
-      title: 'Review Your Day',
-      description:
-          'Check completed tasks, focus time, distractions and your daily progress.',
+      icon: Icons.bar_chart,
+      title: 'View progress',
+      description: 'Review completed tasks and focus time.',
     ),
   ];
-  void _goNext() {
-    if (currentPage < pages.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(microseconds: 300),
-        curve: Curves.easeOut,
+
+  void _next() {
+    if (_currentPage < _pages.length - 1) {
+      _controller.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
       );
     } else {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
     }
-  }
-
-  void _skip() {
-    Navigator.pushReplacementNamed(context, '/login');
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isLastPage = currentPage == pages.length - 1;
     return Scaffold(
-      backgroundColor: const Color(0xFFF1FFF7),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: _skip,
-                  child: const Text(
-                    'Skip',
-                    style: TextStyle(
-                      color: Color(0xFF43D982),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: pages.length,
-                  onPageChanged: (index) {
-                    setState(() {
-                      currentPage = index;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final item = pages[index];
-
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 150,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(42),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(
-                                  0xFF43D982,
-                                ).withValues(alpha: 0.15),
-                                blurRadius: 35,
-                                offset: const Offset(0, 18),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            item.icon,
-                            size: 76,
-                            color: const Color(0xFF43D982),
-                          ),
-                        ),
-
-                        const SizedBox(height: 48),
-
-                        Text(
-                          item.title,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF07112D),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        Text(
-                          item.description,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            height: 1.5,
-                            color: Color(0xFF65708A),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  pages.length,
-                  (index) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: currentPage == index ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: currentPage == index
-                          ? const Color(0xFF43D982)
-                          : const Color(0xFFD5DCE8),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 36),
-
-              SizedBox(
-                width: double.infinity,
-                height: 58,
-                child: ElevatedButton(
-                  onPressed: _goNext,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF43D982),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  child: Text(
-                    isLastPage ? 'Get Started' : 'Next',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      appBar: AppBar(
+        title: const Text('TimeMate'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pushReplacementNamed(context, AppRoutes.login);
+            },
+            child: const Text('Skip', style: TextStyle(color: Colors.white)),
           ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: _pages.length,
+                onPageChanged: (value) {
+                  setState(() => _currentPage = value);
+                },
+                itemBuilder: (context, index) {
+                  final page = _pages[index];
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(page.icon, size: 100, color: Colors.blue),
+                      const SizedBox(height: 24),
+                      Text(
+                        page.title,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(page.description, textAlign: TextAlign.center),
+                    ],
+                  );
+                },
+              ),
+            ),
+            Text('${_currentPage + 1}/${_pages.length}'),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _next,
+                child: Text(
+                  _currentPage == _pages.length - 1 ? 'Get started' : 'Next',
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -195,12 +112,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _OnboardingItem {
-  final IconData icon;
-  final String title;
-  final String description;
   const _OnboardingItem({
     required this.icon,
     required this.title,
     required this.description,
   });
+
+  final IconData icon;
+  final String title;
+  final String description;
 }

@@ -1,30 +1,38 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:project/main.dart';
+import 'package:project/core/theme/app_theme.dart';
+import 'package:project/screens/focus_timer_screen.dart';
+import 'package:project/screens/home_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const TimeMateApp());
+  testWidgets('Home screen shows basic dashboard content', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const HomeScreen()),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('Hello, Alex'), findsOneWidget);
+    expect(find.text('Quick access'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Next task'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Next task'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('Focus timer starts and counts down', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const FocusTimerScreen()),
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('25:00'), findsOneWidget);
+
+    await tester.tap(find.text('Start'));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('24:59'), findsOneWidget);
+    expect(find.text('Pause'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }
