@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project/core/constants/app_colors.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
@@ -21,7 +22,13 @@ class SectionHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title, style: Theme.of(context).textTheme.titleLarge),
-              if (subtitle != null) Text(subtitle!),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ],
             ],
           ),
         ),
