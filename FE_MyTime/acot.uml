@@ -1,0 +1,38 @@
+@startuml
+title Manage Book Flow
+
+|Librarian|
+start
+:Open manage books page;
+:Choose action;
+
+if (Action?) then (Create)
+  :Enter book information;
+
+  |System|
+  :Validate book data;
+  :Create book;
+elseif (Update)
+  :Edit book information;
+
+  |System|
+  :Validate book data;
+  :Update book;
+elseif (Import Excel)
+  :Upload Excel file;
+
+  |System|
+  :Validate each row;
+  :Create authors/categories/publishers if needed;
+  :Import valid books;
+else (Toggle status)
+  |System|
+  :Activate/deactivate book;
+endif
+
+|System|
+:Save audit log;
+
+
+stop
+@enduml
