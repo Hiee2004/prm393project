@@ -30,6 +30,8 @@ namespace BE_MyTime.Services.Tasks
             int userId,
             CreateFocusTaskRequest request)
         {
+            ValidateRequest(request.Title, request.Outputs);
+
             var task = new FocusTask
             {
                 UserId = userId,
@@ -66,8 +68,12 @@ namespace BE_MyTime.Services.Tasks
             int userId,
             UpdateFocusTaskRequest request)
         {
+            ValidateRequest(request.Title, request.Outputs);
+
             var task = await _repository.GetByIdAsync(id, userId);
             if (task == null) return null;
+
+            var previousStatus = task.Status;
 
             task.Title = request.Title.Trim();
             task.Description = request.Description;
@@ -84,6 +90,18 @@ namespace BE_MyTime.Services.Tasks
             task.ReminderTime = request.ReminderTime;
             task.SyncToGoogleCalendar = request.SyncToGoogleCalendar;
             task.UpdatedAt = DateTime.UtcNow;
+
+            if (task.Status == FocusTaskStatus.Completed)
+            {
+                if (previousStatus != FocusTaskStatus.Completed || task.CompletedAt == null)
+                {
+                    task.CompletedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                task.CompletedAt = null;
+            }
 
             task.Outputs.Clear();
 
@@ -122,6 +140,24 @@ namespace BE_MyTime.Services.Tasks
                 : fallback;
         }
 
+        private static void ValidateRequest(string? title, List<string>? outputs)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                throw new InvalidOperationException("Task title is required.");
+            }
+
+            if (outputs == null || outputs.Count == 0)
+            {
+                throw new InvalidOperationException("At least one output is required.");
+            }
+
+            if (outputs.Any(output => string.IsNullOrWhiteSpace(output)))
+            {
+                throw new InvalidOperationException("Outputs cannot be empty.");
+            }
+        }
+
         private static FocusTaskResponse MapToResponse(FocusTask task)
         {
             return new FocusTaskResponse
@@ -141,6 +177,7 @@ namespace BE_MyTime.Services.Tasks
                 ReminderEnabled = task.ReminderEnabled,
                 ReminderTime = task.ReminderTime,
                 SyncToGoogleCalendar = task.SyncToGoogleCalendar,
+                CompletedAt = task.CompletedAt,
                 Outputs = task.Outputs
                     .OrderBy(o => o.SortOrder)
                     .Select(o => new FocusOutputResponse

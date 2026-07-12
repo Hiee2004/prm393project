@@ -547,6 +547,32 @@
     ]
   },
   {
+    "ContainingType": "BE_MyTime.Controllers.ProductivityStreakController",
+    "Method": "GetDashboard",
+    "RelativePath": "api/ProductivityStreak/dashboard",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "days",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": [
+      {
+        "Type": "BE_MyTime.DTOs.Streaks.ProductivityStreakDashboardResponse",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  },
+  {
     "ContainingType": "BE_MyTime.Controllers.ScheduleController",
     "Method": "GetDailySuggestion",
     "RelativePath": "api/Schedule/daily-suggestion",

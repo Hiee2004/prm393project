@@ -941,6 +941,46 @@
         }
       }
     },
+    "/api/ProductivityStreak/dashboard": {
+      "get": {
+        "tags": [
+          "ProductivityStreak"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 180
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductivityStreakDashboardResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductivityStreakDashboardResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductivityStreakDashboardResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/Schedule/smart": {
       "post": {
         "tags": [
@@ -1744,6 +1784,11 @@
           "syncToGoogleCalendar": {
             "type": "boolean"
           },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "outputs": {
             "type": "array",
             "items": {
@@ -1899,6 +1944,56 @@
           "password": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProductivityStreakDashboardResponse": {
+        "type": "object",
+        "properties": {
+          "currentStreak": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bestStreak": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalProductiveDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minimumFocusMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "calendar": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductivityStreakDayResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProductivityStreakDayResponse": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedTaskCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "focusSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isProductive": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false

@@ -44,6 +44,8 @@ namespace BE_MyTime.Models
         [MaxLength(300)]
         public string? GoogleCalendarEventId { get; set; }
 
+        public DateTime? CompletedAt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }

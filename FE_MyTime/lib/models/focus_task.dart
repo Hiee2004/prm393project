@@ -45,6 +45,7 @@ class FocusTask {
     this.reminderTime = '09:00:00',
     this.syncToGoogleCalendar = false,
     this.status = FocusTaskStatus.todo,
+    this.completedAt,
   }) : scheduledDate = scheduledDate ?? DateTime.now();
 
   final String id;
@@ -63,6 +64,7 @@ class FocusTask {
   String reminderTime;
   bool syncToGoogleCalendar;
   FocusTaskStatus status;
+  DateTime? completedAt;
 
   factory FocusTask.fromJson(Map<String, dynamic> json) {
     return FocusTask(
@@ -85,6 +87,9 @@ class FocusTask {
       reminderEnabled: json['reminderEnabled'] ?? false,
       reminderTime: json['reminderTime'] ?? '09:00:00',
       syncToGoogleCalendar: json['syncToGoogleCalendar'] ?? false,
+      completedAt: json['completedAt'] == null
+          ? null
+          : DateTime.parse(json['completedAt']),
       outputs: ((json['outputs'] ?? []) as List)
           .map((item) => FocusOutput.fromJson(item))
           .toList(),

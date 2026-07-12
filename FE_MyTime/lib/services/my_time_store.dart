@@ -278,10 +278,12 @@ class MyTimeStore extends ChangeNotifier {
       for (final output in task.outputs) {
         output.isCompleted = true;
       }
+      task.completedAt ??= DateTime.now();
     } else if (task.outputs.every((output) => output.isCompleted)) {
       for (final output in task.outputs) {
         output.isCompleted = false;
       }
+      task.completedAt = null;
     }
 
     final token = SessionStore.instance.token;
@@ -317,11 +319,32 @@ class MyTimeStore extends ChangeNotifier {
   }
 
   Future<void> deleteTask(FocusTask task) async {
-    _tasks.remove(task);
+    final existingIndex = _tasks.indexOf(task);
+    if (existingIndex == -1) return;
+
+    final previousSelectedTask = _selectedTask;
+    _tasks.removeAt(existingIndex);
     if (identical(_selectedTask, task)) {
       _selectedTask = _firstPlannedTask;
     }
     notifyListeners();
+
+    final token = SessionStore.instance.token;
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    try {
+      await FocusTaskApiService.instance.deleteTask(
+        token: token,
+        taskId: task.id,
+      );
+    } catch (error) {
+      _tasks.insert(existingIndex, task);
+      _selectedTask = previousSelectedTask;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   FocusSessionResult completeSession({
@@ -338,8 +361,10 @@ class MyTimeStore extends ChangeNotifier {
 
     if (task.outputs.every((output) => output.isCompleted)) {
       task.status = FocusTaskStatus.completed;
+      task.completedAt = DateTime.now();
     } else {
       task.status = FocusTaskStatus.processing;
+      task.completedAt = null;
     }
 
     final completedTitles = task.outputs
@@ -386,5 +411,6 @@ class MyTimeStore extends ChangeNotifier {
     target.reminderTime = source.reminderTime;
     target.syncToGoogleCalendar = source.syncToGoogleCalendar;
     target.status = source.status;
+    target.completedAt = source.completedAt;
   }
 }

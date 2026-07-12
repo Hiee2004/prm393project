@@ -160,11 +160,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
 
     if (shouldDelete != true) return;
-    MyTimeStore.instance.deleteTask(task);
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Task deleted.')));
+    try {
+      await MyTimeStore.instance.deleteTask(task);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Task deleted.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
   }
 
   Future<void> _openCreateTask() async {

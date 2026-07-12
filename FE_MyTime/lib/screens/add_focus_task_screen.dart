@@ -303,44 +303,51 @@ class _AddFocusTaskScreenState extends State<AddFocusTaskScreen> {
       return;
     }
 
-    final task = _editingTask;
-    if (task == null) {
-      await MyTimeStore.instance.addTask(
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        focusMinutes: _minutes,
-        priority: _priority,
-        scheduledDate: _scheduledDate,
-        repeat: _repeat,
-        reminderEnabled: _reminderEnabled,
-        reminderTime: _formatTime(_reminderTime),
-        outputs: outputs,
-      );
-    } else {
-      await MyTimeStore.instance.updateTask(
-        task: task,
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        focusMinutes: _minutes,
-        priority: _priority,
-        status: _status,
-        scheduledDate: _scheduledDate,
-        repeat: _repeat,
-        reminderEnabled: _reminderEnabled,
-        reminderTime: _formatTime(_reminderTime),
-        outputs: outputs,
-      );
-    }
+    try {
+      final task = _editingTask;
+      if (task == null) {
+        await MyTimeStore.instance.addTask(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          focusMinutes: _minutes,
+          priority: _priority,
+          scheduledDate: _scheduledDate,
+          repeat: _repeat,
+          reminderEnabled: _reminderEnabled,
+          reminderTime: _formatTime(_reminderTime),
+          outputs: outputs,
+        );
+      } else {
+        await MyTimeStore.instance.updateTask(
+          task: task,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          focusMinutes: _minutes,
+          priority: _priority,
+          status: _status,
+          scheduledDate: _scheduledDate,
+          repeat: _repeat,
+          reminderEnabled: _reminderEnabled,
+          reminderTime: _formatTime(_reminderTime),
+          outputs: outputs,
+        );
+      }
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isEditing ? 'Task updated.' : 'Task added.')),
-    );
-    if (_returnRoute != null) {
-      Navigator.pop(context);
-    } else {
-      Navigator.pushReplacementNamed(context, AppRoutes.tasks);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_isEditing ? 'Task updated.' : 'Task added.')),
+      );
+      if (_returnRoute != null) {
+        Navigator.pop(context);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.tasks);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -533,8 +540,12 @@ class _AddFocusTaskScreenState extends State<AddFocusTaskScreen> {
                     controller: _titleController,
                     decoration: const InputDecoration(labelText: 'Task name'),
                     validator: (value) {
-                      if ((value ?? '').trim().isEmpty) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) {
                         return 'Please enter a task name';
+                      }
+                      if (text.length > 180) {
+                        return 'Task name must be 180 characters or fewer';
                       }
                       return null;
                     },
@@ -546,6 +557,13 @@ class _AddFocusTaskScreenState extends State<AddFocusTaskScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Task description',
                     ),
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.length > 1000) {
+                        return 'Description must be 1000 characters or fewer';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<int>(
@@ -741,6 +759,16 @@ class _AddFocusTaskScreenState extends State<AddFocusTaskScreen> {
                             labelText: 'Output ${index + 1}',
                             hintText: 'Example: Complete the login screen',
                           ),
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            if (text.isEmpty) {
+                              return 'Please enter an output or remove this row';
+                            }
+                            if (text.length > 180) {
+                              return 'Output must be 180 characters or fewer';
+                            }
+                            return null;
+                          },
                         ),
                       ),
                       IconButton(

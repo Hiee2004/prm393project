@@ -11,12 +11,15 @@ namespace BE_MyTime.DTOs.Task
         [MaxLength(1000)]
         public string? Description { get; set; }
 
+        [Range(1, 300)]
         public int FocusMinutes { get; set; } = 25;
 
+        [MaxLength(20)]
         public string Priority { get; set; } = "Medium";
 
         public DateTime? Deadline { get; set; }
 
+        [Range(1, 5)]
         public int Difficulty { get; set; } = 3;
 
         public DateTime? ScheduledDate { get; set; }
@@ -25,6 +28,7 @@ namespace BE_MyTime.DTOs.Task
 
         public TimeSpan? EndTime { get; set; }
 
+        [MaxLength(20)]
         public string Repeat { get; set; } = "None";
 
         public bool ReminderEnabled { get; set; } = false;
@@ -33,6 +37,7 @@ namespace BE_MyTime.DTOs.Task
 
         public bool SyncToGoogleCalendar { get; set; } = false;
 
+        [MinLength(1)]
         public List<string> Outputs { get; set; } = new();
     }
 }

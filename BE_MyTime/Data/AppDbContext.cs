@@ -176,6 +176,8 @@ namespace BE_MyTime.Data
                 entity.Property(x => x.GoogleCalendarEventId)
                     .HasMaxLength(300);
 
+                entity.Property(x => x.CompletedAt);
+
                 entity.HasIndex(x => new { x.UserId, x.Deadline });
 
                 entity.Property(x => x.CreatedAt)

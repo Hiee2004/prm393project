@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:project/core/config/api_config.dart';
 import 'package:project/models/user_profile.dart';
+import 'package:project/services/api_error.dart';
 
 class ProfileApiService {
   ProfileApiService._();
@@ -18,7 +19,10 @@ class ProfileApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Load profile failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Load profile failed.',
+      );
     }
 
     final data = jsonDecode(response.body);
@@ -52,7 +56,10 @@ class ProfileApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Update profile failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Update profile failed.',
+      );
     }
 
     final data = jsonDecode(response.body);

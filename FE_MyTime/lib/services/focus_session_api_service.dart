@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:project/core/config/api_config.dart';
 import 'package:project/models/focus_session.dart';
+import 'package:project/services/api_error.dart';
 
 class FocusSessionApiService {
   FocusSessionApiService._();
@@ -41,7 +42,10 @@ class FocusSessionApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Create focus session failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Create focus session failed.',
+      );
     }
   }
 
@@ -52,7 +56,10 @@ class FocusSessionApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Load focus sessions failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Load focus sessions failed.',
+      );
     }
 
     final data = jsonDecode(response.body) as List;
