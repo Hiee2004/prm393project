@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
+import 'package:project/core/theme/app_theme.dart';
 
 class AppBottomNavigation extends StatelessWidget {
   const AppBottomNavigation({super.key, required this.selectedIndex});
@@ -10,22 +10,22 @@ class AppBottomNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final scene = theme.extension<AppSceneTheme>()!;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       height: 68,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(
-          color: isDark ? const Color(0xFF374151) : AppColors.border,
+        color: theme.colorScheme.surface.withValues(
+          alpha: theme.brightness == Brightness.dark ? 0.90 : 0.94,
         ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: scene.cardBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.05),
-            blurRadius: 14,
+            color: scene.navGlow,
+            blurRadius: 18,
             offset: const Offset(0, 8),
           ),
         ],
@@ -95,6 +95,7 @@ class _Item extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
+    final secondaryText = theme.colorScheme.onSurface.withValues(alpha: 0.58);
 
     return InkWell(
       onTap: onTap,
@@ -111,7 +112,7 @@ class _Item extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color: selected ? primary : Colors.grey,
+              color: selected ? primary : secondaryText,
               size: 22,
             ),
           ),
@@ -121,7 +122,7 @@ class _Item extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-              color: selected ? primary : Colors.grey,
+              color: selected ? primary : secondaryText,
             ),
           ),
         ],

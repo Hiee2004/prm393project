@@ -92,8 +92,8 @@ class FocusNotificationService {
       title: 'Focus session complete',
       body: taskTitle,
       ongoing: false,
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+      importance: Importance.high,
+      priority: Priority.high,
     );
   }
 
@@ -129,6 +129,7 @@ class FocusNotificationService {
         ongoing: ongoing,
         autoCancel: !ongoing,
         onlyAlertOnce: ongoing,
+        playSound: !ongoing,
         showWhen: false,
         category: AndroidNotificationCategory.progress,
         actions: actions,

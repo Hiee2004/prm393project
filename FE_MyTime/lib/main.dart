@@ -16,11 +16,9 @@ class MyTimeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: MyTimeStore.instance,
-      builder: (context, child) {
-        final themeMode = MyTimeStore.instance.profile.themeMode;
-
+    return ValueListenableBuilder<String>(
+      valueListenable: MyTimeStore.instance.themeModeListenable,
+      builder: (context, themeMode, child) {
         return MaterialApp(
           title: 'MyTime',
           debugShowCheckedModeBanner: false,
@@ -35,3 +33,6 @@ class MyTimeApp extends StatelessWidget {
     );
   }
 }
+
+//flutter run -d chrome --web-port=58053
+//flutter run -d emulator-5554

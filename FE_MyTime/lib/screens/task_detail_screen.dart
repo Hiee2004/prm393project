@@ -64,6 +64,12 @@ class TaskDetailScreen extends StatelessWidget {
             title: const Text('Task details'),
             actions: [
               IconButton(
+                tooltip: 'Home',
+                onPressed: () =>
+                    Navigator.pushReplacementNamed(context, AppRoutes.home),
+                icon: const Icon(Icons.home_rounded),
+              ),
+              IconButton(
                 tooltip: 'Edit',
                 onPressed: () {
                   Navigator.pushNamed(
@@ -193,6 +199,12 @@ class TaskDetailScreen extends StatelessWidget {
                 },
                 icon: const Icon(Icons.edit),
                 label: const Text('Edit task'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.aiDashboard),
+                icon: const Icon(Icons.calendar_view_day_rounded),
+                label: const Text('View in Timeline'),
               ),
               OutlinedButton.icon(
                 onPressed: () => _deleteTask(context, task),

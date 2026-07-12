@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:project/core/config/api_config.dart';
 
 class UserApiService {
-  static const String baseUrl = 'https://localhost:7063';
+  static String get baseUrl => ApiConfig.baseUrl;
 
   Future<Map<String, dynamic>> getMe(String token) async {
     final response = await http.get(

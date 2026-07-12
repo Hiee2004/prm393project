@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:project/screens/add_focus_task_screen.dart';
+import 'package:project/screens/ai_dashboard_screen.dart';
 import 'package:project/screens/calendar_screen.dart';
 import 'package:project/screens/focus_timer_screen.dart';
 import 'package:project/screens/home_screen.dart';
+import 'package:project/screens/habits_screen.dart';
 import 'package:project/screens/login_screen.dart';
 import 'package:project/screens/notifications_screen.dart';
 import 'package:project/screens/onboarding_screen.dart';
@@ -31,6 +33,8 @@ abstract final class AppRoutes {
   static const String settings = '/settings';
   static const String calendar = '/calendar';
   static const String editProfile = '/edit-profile';
+  static const String aiDashboard = '/ai-dashboard';
+  static const String habits = '/habits';
 
   static Map<String, WidgetBuilder> get routes => {
     splash: (_) => const SplashScreen(),
@@ -48,5 +52,7 @@ abstract final class AppRoutes {
     settings: (_) => const SettingsScreen(),
     calendar: (_) => const CalendarScreen(),
     editProfile: (_) => const EditProfileScreen(),
+    aiDashboard: (_) => const AiDashboardScreen(),
+    habits: (_) => const HabitsScreen(),
   };
 }

@@ -3,6 +3,7 @@ import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
 import 'package:project/shared/widgets/app_card.dart';
 import 'package:project/services/auth_api_service.dart';
+import 'package:project/services/my_time_store.dart';
 import 'package:project/services/session_store.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -44,6 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final token = result['token']?.toString() ?? '';
       SessionStore.instance.saveToken(token);
+      await MyTimeStore.instance.hydrateSettingsFromBackend();
 
       if (!mounted) return;
 
@@ -192,8 +194,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           //   ),
                           // ),
                           // const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 4,
+                            runSpacing: 2,
                             children: [
                               const Text('Already have an account?'),
                               TextButton(

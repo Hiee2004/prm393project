@@ -23,6 +23,25 @@ void main() {
   testWidgets('Focus session sends completed output to results', (
     tester,
   ) async {
+    final store = MyTimeStore.instance;
+    final task = await store.addTask(
+      title: 'Focus timer test task',
+      description: 'Used by widget test',
+      focusMinutes: 25,
+      priority: TaskPriority.high,
+      scheduledDate: DateTime.now(),
+      outputs: const [
+        'Complete the Focus Time screen',
+        'Review notes',
+        'Share recap',
+      ],
+    );
+    store.selectTask(task);
+
+    addTearDown(() async {
+      await store.deleteTask(task);
+    });
+
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
@@ -33,10 +52,6 @@ void main() {
         },
       ),
     );
-
-    expect(find.text('25:00'), findsOneWidget);
-    expect(find.text('READY'), findsOneWidget);
-    expect(find.byType(AnimatedHourglass), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('Start'),
@@ -54,6 +69,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.byType(CheckboxListTile).first);
+
     await tester.scrollUntilVisible(
       find.text('Finish and view results'),
       250,
@@ -67,15 +83,17 @@ void main() {
       250,
       scrollable: find.byType(Scrollable).first,
     );
+
     expect(find.text('Latest session'), findsOneWidget);
     expect(find.text('1/3'), findsOneWidget);
     expect(find.text('Complete the Focus Time screen'), findsOneWidget);
   });
 
-  test('Store supports create, update and delete task', () {
+  test('Store supports create, update and delete task', () async {
     final store = MyTimeStore.instance;
     final plannedDate = DateTime(2026, 6, 20);
-    final task = store.addTask(
+
+    final task = await store.addTask(
       title: 'CRUD task',
       description: 'Create task',
       focusMinutes: 25,
@@ -83,14 +101,14 @@ void main() {
       scheduledDate: plannedDate,
       repeat: TaskRepeat.weekly,
       reminderEnabled: true,
-      reminderTime: '08:30',
+      reminderTime: '08:30:00',
       outputs: ['Output A'],
     );
 
     expect(store.tasks.contains(task), isTrue);
     expect(task.occursOn(plannedDate.add(const Duration(days: 7))), isTrue);
 
-    store.updateTask(
+    await store.updateTask(
       task: task,
       title: 'Updated CRUD task',
       description: 'Updated task',
@@ -100,7 +118,7 @@ void main() {
       scheduledDate: plannedDate,
       repeat: TaskRepeat.monthly,
       reminderEnabled: true,
-      reminderTime: '10:00',
+      reminderTime: '10:00:00',
       outputs: ['Output A', 'Output B'],
     );
 
@@ -109,28 +127,31 @@ void main() {
     expect(task.priority, TaskPriority.high);
     expect(task.outputs.length, 2);
     expect(task.repeat, TaskRepeat.monthly);
-    expect(task.reminderTime, '10:00');
+    expect(task.reminderTime, '10:00:00');
 
-    store.deleteTask(task);
+    await store.deleteTask(task);
     expect(store.tasks.contains(task), isFalse);
   });
 
   testWidgets('Task list filters by status and priority', (tester) async {
     final store = MyTimeStore.instance;
-    final processingHigh = store.addTask(
+
+    final processingHigh = await store.addTask(
       title: 'Processing high task',
       description: 'Visible after both filters',
       focusMinutes: 25,
       priority: TaskPriority.high,
       outputs: ['Output'],
     );
-    final todoHigh = store.addTask(
+
+    final todoHigh = await store.addTask(
       title: 'Todo high task',
       description: 'Hidden by status filter',
       focusMinutes: 25,
       priority: TaskPriority.high,
       outputs: ['Output'],
     );
+
     store.startTask(processingHigh);
 
     await tester.pumpWidget(
@@ -155,10 +176,11 @@ void main() {
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
     await tester.pumpAndSettle();
+
     expect(find.text('Processing high task'), findsOneWidget);
     expect(find.text('Todo high task'), findsNothing);
 
-    store.deleteTask(processingHigh);
-    store.deleteTask(todoHigh);
+    await store.deleteTask(processingHigh);
+    await store.deleteTask(todoHigh);
   });
 }

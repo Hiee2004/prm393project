@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
+import 'package:project/core/theme/app_theme.dart';
 import 'package:project/services/my_time_store.dart';
 import 'package:project/services/profile_api_service.dart';
 import 'package:project/services/session_store.dart';
 import 'package:project/shared/widgets/app_bottom_navigation.dart';
 import 'package:project/shared/widgets/app_card.dart';
+import 'package:project/shared/widgets/profile_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -39,10 +40,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final profile = await ProfileApiService.instance.getMe(token);
       MyTimeStore.instance.updateProfile(profile);
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = error.toString();
       });
     } finally {
       if (mounted) {
@@ -66,11 +67,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: _loadProfile,
             icon: const Icon(Icons.refresh_rounded),
           ),
-          IconButton(
-            tooltip: 'Settings',
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
-            icon: const Icon(Icons.settings_outlined),
-          ),
         ],
       ),
       body: AnimatedBuilder(
@@ -85,7 +81,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 if (_isLoadingProfile)
                   const LinearProgressIndicator(minHeight: 3),
-
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 12),
                   AppCard(
@@ -96,17 +91,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ],
-
                 const SizedBox(height: 12),
-
                 _ProfileHeader(
                   fullName: profile.fullName,
                   email: profile.email,
                   avatarUrl: profile.avatarUrl,
                 ),
-
                 const SizedBox(height: 18),
-
                 Row(
                   children: [
                     Expanded(
@@ -126,22 +117,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 18),
-
                 _FocusSummaryCard(
                   totalFocus: _formatMinutes(store.totalFocusSeconds),
                   tasksDone: store.completedTaskCount,
                   totalTasks: store.tasks.length,
                   themeMode: profile.themeMode,
                 ),
-
                 const SizedBox(height: 18),
-
                 _AccountInfoCard(
                   fullName: profile.fullName,
                   email: profile.email,
                   timeZone: profile.timeZone,
+                  themeMode: profile.themeMode,
                 ),
               ],
             ),
@@ -166,20 +154,28 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasAvatar = avatarUrl != null && avatarUrl!.trim().isNotEmpty;
+    final theme = Theme.of(context);
+    final scene = theme.extension<AppSceneTheme>()!;
 
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFFF7D8), Color(0xFFFFC83D)],
+          colors: [
+            theme.colorScheme.surface.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.82 : 0.88,
+            ),
+            theme.colorScheme.primary.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.34 : 0.68,
+            ),
+          ],
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.20),
+            color: scene.navGlow,
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
@@ -187,45 +183,36 @@ class _ProfileHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          CircleAvatar(
+          ProfileAvatar(
+            avatarPath: avatarUrl,
             radius: 48,
-            backgroundColor: Colors.white,
-            backgroundImage: hasAvatar ? NetworkImage(avatarUrl!) : null,
-            child: hasAvatar
-                ? null
-                : const Icon(
-                    Icons.eco_rounded,
-                    color: AppColors.primary,
-                    size: 46,
-                  ),
+            icon: Icons.person_rounded,
+            backgroundColor: theme.colorScheme.surface,
           ),
           const SizedBox(height: 16),
           Text(
             fullName.isEmpty ? 'Your Name' : fullName,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-            ),
+            style: theme.textTheme.headlineSmall,
           ),
           const SizedBox(height: 4),
           Text(
             email.isEmpty ? 'your@email.com' : email,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.72),
+              color: theme.colorScheme.surface.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.62 : 0.74,
+              ),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: const Text(
+            child: Text(
               'Auth: Email',
-              style: TextStyle(
-                color: AppColors.primaryDark,
-                fontWeight: FontWeight.w800,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.primary,
               ),
             ),
           ),
@@ -248,25 +235,20 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.primary, size: 28),
+          Icon(icon, color: theme.colorScheme.primary, size: 28),
           const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 30,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          Text(value, style: theme.textTheme.headlineSmall),
           const SizedBox(height: 4),
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: theme.textTheme.bodyMedium,
           ),
         ],
       ),
@@ -289,34 +271,30 @@ class _FocusSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final progress = totalTasks == 0 ? 0.0 : tasksDone / totalTasks;
 
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Focus Overview',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          Text('Focus Overview', style: theme.textTheme.titleLarge),
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: progress.clamp(0.0, 1.0),
               minHeight: 12,
-              color: AppColors.primary,
-              backgroundColor: AppColors.surfaceSoft,
+              color: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.secondary.withValues(
+                alpha: 0.20,
+              ),
             ),
           ),
           const SizedBox(height: 16),
           _InfoRow(label: 'Total Focus Time', value: totalFocus),
           _InfoRow(label: 'Tasks Done', value: '$tasksDone/$totalTasks'),
-          _InfoRow(label: 'Theme', value: themeMode),
+          _InfoRow(label: 'Theme', value: AppTheme.labelForMode(themeMode)),
         ],
       ),
     );
@@ -328,30 +306,28 @@ class _AccountInfoCard extends StatelessWidget {
     required this.fullName,
     required this.email,
     required this.timeZone,
+    required this.themeMode,
   });
 
   final String fullName;
   final String email;
   final String timeZone;
+  final String themeMode;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Account Info',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          Text('Account Info', style: theme.textTheme.titleLarge),
           const SizedBox(height: 12),
           _InfoRow(label: 'Full Name', value: fullName),
           _InfoRow(label: 'Email', value: email),
           _InfoRow(label: 'Time Zone', value: timeZone),
+          _InfoRow(label: 'Theme', value: AppTheme.labelForMode(themeMode)),
           const _InfoRow(label: 'Member Since', value: 'May 2026'),
           const SizedBox(height: 14),
           SizedBox(
@@ -377,22 +353,18 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
+          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
             ),

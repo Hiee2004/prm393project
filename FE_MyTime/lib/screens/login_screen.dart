@@ -4,6 +4,7 @@ import 'package:project/core/routes/app_routes.dart';
 import 'package:project/services/auth_api_service.dart';
 import 'package:project/shared/widgets/app_card.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:project/services/my_time_store.dart';
 import 'package:project/services/session_store.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _hidePassword = true;
   bool _isLoading = false;
-  static const String _googleClientId =
+  static const String _googleServerClientId =
       '385942048102-dq9v50er0h2uo4nal9gehognss0ft3s2.apps.googleusercontent.com';
   @override
   void dispose() {
@@ -40,17 +41,23 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       final token = result['token']?.toString() ?? '';
+
       SessionStore.instance.saveToken(token);
+      await MyTimeStore.instance.hydrateSettingsFromBackend();
 
       if (!mounted) return;
+
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -59,10 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final googleSignIn = GoogleSignIn(
-        clientId: _googleClientId,
-        scopes: ['email', 'profile'],
+        serverClientId: _googleServerClientId,
+        scopes: const ['email', 'profile', 'openid'],
       );
-
       final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         return;
@@ -76,9 +82,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final result = await AuthApiService().loginWithGoogle(idToken);
-      final token = result['token'];
 
-      debugPrint('JWT token: $token');
+      final token = result['token']?.toString() ?? '';
+
+      SessionStore.instance.saveToken(token);
+      await MyTimeStore.instance.hydrateSettingsFromBackend();
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);
@@ -209,8 +217,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 4,
+                            runSpacing: 2,
                             children: [
                               const Text('Do not have an account?'),
                               TextButton(

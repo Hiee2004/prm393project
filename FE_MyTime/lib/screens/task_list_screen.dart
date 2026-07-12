@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
+import 'package:project/core/theme/app_theme.dart';
 import 'package:project/models/focus_task.dart';
 import 'package:project/services/my_time_store.dart';
 import 'package:project/shared/widgets/app_bottom_navigation.dart';
@@ -22,6 +23,11 @@ class TaskListScreen extends StatefulWidget {
 class _TaskListScreenState extends State<TaskListScreen> {
   TaskStatusFilter _statusFilter = TaskStatusFilter.all;
   TaskPriorityFilter _priorityFilter = TaskPriorityFilter.all;
+  @override
+  void initState() {
+    super.initState();
+    MyTimeStore.instance.loadTasksFromApi();
+  }
 
   List<FocusTask> _filteredTasks(List<FocusTask> tasks) {
     return tasks.where((task) {
@@ -47,11 +53,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
   void _openTask(FocusTask task) {
     MyTimeStore.instance.selectTask(task);
     Navigator.pushNamed(context, AppRoutes.taskDetail);
-  }
-
-  void _startFocus(FocusTask task) {
-    MyTimeStore.instance.startTask(task);
-    Navigator.pushNamed(context, AppRoutes.focus);
   }
 
   void _editTask(FocusTask task) {
@@ -80,7 +81,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
 
     if (shouldDelete == true) {
-      MyTimeStore.instance.deleteTask(task);
+      await MyTimeStore.instance.deleteTask(task);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -90,12 +91,25 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final store = MyTimeStore.instance;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tasks'),
         actions: [
+          IconButton(
+            tooltip: 'Home',
+            onPressed: () =>
+                Navigator.pushReplacementNamed(context, AppRoutes.home),
+            icon: const Icon(Icons.home_rounded),
+          ),
+          IconButton(
+            tooltip: 'AI planner',
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.aiDashboard),
+            icon: const Icon(Icons.smart_toy_rounded),
+          ),
           IconButton(
             tooltip: 'Add task',
             onPressed: () => Navigator.pushNamed(context, AppRoutes.addTask),
@@ -132,6 +146,45 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   },
                 ),
               ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                  child: AppCard(
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'AI Time Manager',
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Generate a task order, timeline, and Pomodoro plan.',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.aiDashboard,
+                          ),
+                          child: const Text('Open'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               if (tasks.isEmpty)
                 const SliverFillRemaining(
                   hasScrollBody: false,
@@ -154,9 +207,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         child: _TaskCard(
                           task: task,
                           onTap: () => _openTask(task),
-                          onStart: () => _startFocus(task),
                           onEdit: () => _editTask(task),
                           onDelete: () => _deleteTask(task),
+                          onOpenTimeline: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.aiDashboard,
+                          ),
                         ),
                       );
                     },
@@ -168,7 +224,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.addTask),
-        backgroundColor: AppColors.primary,
+        backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('New task'),
@@ -273,18 +329,25 @@ class _TaskHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scene = theme.extension<AppSceneTheme>()!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.primary, AppColors.primaryDark],
+          colors: [
+            theme.colorScheme.primary,
+            theme.colorScheme.primary.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.72 : 0.88,
+            ),
+          ],
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.18),
+            color: scene.navGlow,
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -293,20 +356,16 @@ class _TaskHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Task board',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-            ),
+            style: theme.textTheme.headlineSmall?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 6),
           const Text(
-            'Plan work, choose focus time, and track outputs.',
+            'A compact list for today and the next tasks.',
             style: TextStyle(color: Color(0xFFE8F5FF)),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Row(
             children: [
               _HeaderMetric(value: '$visibleTasks', label: 'Visible'),
@@ -330,6 +389,7 @@ class _HeaderMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -341,11 +401,7 @@ class _HeaderMetric extends StatelessWidget {
           children: [
             Text(
               value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-              ),
+              style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
             ),
             Text(label, style: const TextStyle(color: Color(0xFFE8F5FF))),
           ],
@@ -370,16 +426,16 @@ class _FilterStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AppCard(
       child: SizedBox(
         width: double.infinity,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Status',
-              style: TextStyle(
-                color: AppColors.textSecondary,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -397,10 +453,9 @@ class _FilterStrip extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'Priority',
-              style: TextStyle(
-                color: AppColors.textSecondary,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -437,6 +492,7 @@ class _ChoicePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: InkWell(
@@ -447,16 +503,20 @@ class _ChoicePill extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: BoxDecoration(
-            color: selected ? AppColors.primary : AppColors.surfaceSoft,
+            color: selected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.surface.withValues(
+                    alpha: theme.brightness == Brightness.dark ? 0.70 : 0.88,
+                  ),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
+              color: selected ? theme.colorScheme.primary : theme.dividerColor,
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : AppColors.textPrimary,
+              color: selected ? Colors.white : theme.colorScheme.onSurface,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -470,147 +530,186 @@ class _TaskCard extends StatelessWidget {
   const _TaskCard({
     required this.task,
     required this.onTap,
-    required this.onStart,
     required this.onEdit,
     required this.onDelete,
+    required this.onOpenTimeline,
   });
 
   final FocusTask task;
   final VoidCallback onTap;
-  final VoidCallback onStart;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onOpenTimeline;
 
   @override
   Widget build(BuildContext context) {
-    final progress = task.outputs.isEmpty
-        ? 0.0
-        : task.completedOutputCount / task.outputs.length;
-    final canStart = task.canStartToday;
+    final theme = Theme.of(context);
+    final metaText = [
+      '${task.focusMinutes} min focus',
+      _formatDate(task.scheduledDate),
+      if (task.repeat != TaskRepeat.none) _repeatText(task.repeat),
+    ].join(' • ');
+    final detailText = [
+      '${task.completedOutputCount}/${task.outputs.length} outputs',
+      if (task.reminderEnabled) task.reminderTime,
+    ].join(' • ');
 
     return AppCard(
       onTap: onTap,
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: _statusColor(task.status).withValues(alpha: 0.11),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  _statusIcon(task.status),
-                  color: _statusColor(task.status),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 3),
-                    Text('${task.focusMinutes} min focus'),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'Task actions',
-                onPressed: () => _showActions(context),
-                icon: const Icon(Icons.more_horiz_rounded),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _InfoBadge(
-                icon: _statusIcon(task.status),
-                label: _statusText(task.status),
-                color: _statusColor(task.status),
-              ),
-              _InfoBadge(
-                icon: Icons.flag_rounded,
-                label: _priorityText(task.priority),
-                color: _priorityColor(task.priority),
-              ),
-              _InfoBadge(
-                icon: Icons.calendar_today_outlined,
-                label: _formatDate(task.scheduledDate),
-                color: AppColors.primary,
-              ),
-              if (task.repeat != TaskRepeat.none)
-                _InfoBadge(
-                  icon: Icons.repeat_rounded,
-                  label: _repeatText(task.repeat),
-                  color: AppColors.secondary,
-                ),
-              if (task.reminderEnabled)
-                _InfoBadge(
-                  icon: Icons.notifications_active_outlined,
-                  label: task.reminderTime,
-                  color: AppColors.warning,
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(task.description, maxLines: 2, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 9,
-              color: AppColors.primary,
-              backgroundColor: AppColors.progressTrack,
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: _statusColor(task.status).withValues(alpha: 0.11),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              _statusIcon(task.status),
+              color: _statusColor(task.status),
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${task.completedOutputCount}/${task.outputs.length} outputs done',
-                  style: const TextStyle(color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  decoration: task.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : TextDecoration.none,
+                                  color: task.isCompleted
+                                      ? AppColors.textSecondary
+                                      : null,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            metaText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'Task actions',
+                      onPressed: () => _showActions(context),
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.more_horiz_rounded),
+                    ),
+                  ],
                 ),
-              ),
-              if (!canStart && !task.isCompleted)
-                Text(
-                  'Starts ${_formatDate(task.scheduledDate)}',
-                  style: const TextStyle(
-                    color: AppColors.warning,
-                    fontWeight: FontWeight.w700,
+                if (task.description.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    task.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
+                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _InfoBadge(
+                      icon: _statusIcon(task.status),
+                      label: _statusText(task.status),
+                      color: _statusColor(task.status),
+                    ),
+                    _InfoBadge(
+                      icon: Icons.flag_rounded,
+                      label: _priorityText(task.priority),
+                      color: _priorityColor(task.priority),
+                    ),
+                    if (task.reminderEnabled)
+                      _InfoBadge(
+                        icon: Icons.notifications_active_outlined,
+                        label: task.reminderTime,
+                        color: theme.colorScheme.primary,
+                      ),
+                  ],
                 ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: task.isCompleted
-                  ? null
-                  : canStart
-                  ? onStart
-                  : null,
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(
-                task.isCompleted
-                    ? 'Completed'
-                    : canStart
-                    ? 'Focus on this task'
-                    : 'Future plan only',
-              ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        detailText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message: 'View in AI Timeline',
+                      child: InkWell(
+                        onTap: onOpenTimeline,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_view_day_rounded,
+                                size: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Timeline',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -619,10 +718,13 @@ class _TaskCard extends StatelessWidget {
   }
 
   void _showActions(BuildContext context) {
+    final theme = Theme.of(context);
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.94 : 0.98,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
@@ -634,7 +736,10 @@ class _TaskCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.edit_outlined),
+                  leading: Icon(
+                    Icons.edit_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
                   title: const Text('Edit task'),
                   onTap: () {
                     Navigator.pop(context);
@@ -642,13 +747,13 @@ class _TaskCard extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.delete_outline,
-                    color: AppColors.danger,
+                    color: theme.colorScheme.error,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Delete task',
-                    style: TextStyle(color: AppColors.danger),
+                    style: TextStyle(color: theme.colorScheme.error),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -678,7 +783,7 @@ class _InfoBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(18),
@@ -686,11 +791,15 @@ class _InfoBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 5),
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(color: color, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -703,6 +812,7 @@ class _EmptyTasks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -710,10 +820,10 @@ class _EmptyTasks extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.search_off_rounded,
                 size: 52,
-                color: AppColors.primary,
+                color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 10),
               Text(

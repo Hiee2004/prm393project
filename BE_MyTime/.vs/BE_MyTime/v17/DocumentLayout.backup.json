@@ -1,0 +1,661 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\be_mytime.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:be_mytime.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\services\\ai\\aitimemanagerservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:services\\ai\\aitimemanagerservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\controllers\\focussessionscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:controllers\\focussessionscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\services\\tasks\\focussessionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:services\\tasks\\focussessionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\interfaces\\ifocussessionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:interfaces\\ifocussessionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\repositories\\focussessionrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:repositories\\focussessionrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\focussessions\\focussessionresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\focussessions\\focussessionresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\focussessions\\createfocussessionrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\focussessions\\createfocussessionrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\models\\focussession.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:models\\focussession.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\controllers\\focustaskscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:controllers\\focustaskscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\services\\tasks\\focustaskservice .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:services\\tasks\\focustaskservice .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\interfaces\\ifocustaskservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:interfaces\\ifocustaskservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\task\\updatefocustaskrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\task\\updatefocustaskrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\task\\createfocustaskrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\task\\createfocustaskrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\task\\focusoutputresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\task\\focusoutputresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\task\\focustaskresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\task\\focustaskresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\models\\focustask.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:models\\focustask.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\models\\focusoutput.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:models\\focusoutput.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\repositories\\focustaskrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:repositories\\focustaskrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:repositories\\userrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\services\\users\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:services\\users\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\services\\auth\\passwordservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:services\\auth\\passwordservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\services\\auth\\jwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:services\\auth\\jwtservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\services\\auth\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:services\\auth\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\interfaces\\iuserservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:interfaces\\iuserservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\auth\\authresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\auth\\authresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:interfaces\\iauthservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\auth\\registerrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\auth\\registerrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\auth\\googleloginrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\auth\\googleloginrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\dtos\\auth\\loginrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:dtos\\auth\\loginrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\data\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:data\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\models\\usersetting.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:models\\usersetting.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|d:\\projectprm393\\be_mytime\\be_mytime\\models\\aifocusevaluation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{19317912-AC4B-45A3-1276-85453B678B5B}|BE_MyTime.csproj|solutionrelative:models\\aifocusevaluation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 16,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:6:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:5:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:14:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:15:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:13:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "BE_MyTime.http",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\BE_MyTime.http",
+              "RelativeDocumentMoniker": "BE_MyTime.http",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\BE_MyTime.http",
+              "RelativeToolTip": "BE_MyTime.http",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003502|",
+              "WhenOpened": "2026-07-03T12:04:25.514Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "AiTimeManagerService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\AI\\AiTimeManagerService.cs",
+              "RelativeDocumentMoniker": "Services\\AI\\AiTimeManagerService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\AI\\AiTimeManagerService.cs",
+              "RelativeToolTip": "Services\\AI\\AiTimeManagerService.cs",
+              "ViewState": "AgIAAJ0AAAAAAAAAAAAkwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-03T12:04:16.282Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "FocusSessionRepository.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Repositories\\FocusSessionRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\FocusSessionRepository.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Repositories\\FocusSessionRepository.cs",
+              "RelativeToolTip": "Repositories\\FocusSessionRepository.cs",
+              "ViewState": "AgIAACUAAAAAAAAAAADwvzIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T11:11:23.119Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "FocusSessionResponse.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\FocusSessions\\FocusSessionResponse.cs",
+              "RelativeDocumentMoniker": "DTOs\\FocusSessions\\FocusSessionResponse.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\FocusSessions\\FocusSessionResponse.cs",
+              "RelativeToolTip": "DTOs\\FocusSessions\\FocusSessionResponse.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAAwCMAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T11:10:17.95Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAUwBsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-06-23T02:59:26.758Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "IFocusSessionService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Interfaces\\IFocusSessionService.cs",
+              "RelativeDocumentMoniker": "Interfaces\\IFocusSessionService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Interfaces\\IFocusSessionService.cs",
+              "RelativeToolTip": "Interfaces\\IFocusSessionService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAA2AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T11:19:24.796Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "CreateFocusSessionRequest.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\FocusSessions\\CreateFocusSessionRequest.cs",
+              "RelativeDocumentMoniker": "DTOs\\FocusSessions\\CreateFocusSessionRequest.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\FocusSessions\\CreateFocusSessionRequest.cs",
+              "RelativeToolTip": "DTOs\\FocusSessions\\CreateFocusSessionRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAzAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T11:09:48.856Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAEkAAAAAAAAAAAAnwIMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T02:59:52.455Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "FocusSessionsController.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Controllers\\FocusSessionsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\FocusSessionsController.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Controllers\\FocusSessionsController.cs",
+              "RelativeToolTip": "Controllers\\FocusSessionsController.cs",
+              "ViewState": "AgIAACMAAAAAAAAAAAAgwDgAAAAjAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T11:24:50.805Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "FocusSessionService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Tasks\\FocusSessionService.cs",
+              "RelativeDocumentMoniker": "Services\\Tasks\\FocusSessionService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Tasks\\FocusSessionService.cs",
+              "RelativeToolTip": "Services\\Tasks\\FocusSessionService.cs",
+              "ViewState": "AgIAAFYAAAAAAAAAAAAUwGUAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T11:20:23.827Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "FocusTasksController.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Controllers\\FocusTasksController.cs",
+              "RelativeDocumentMoniker": "Controllers\\FocusTasksController.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Controllers\\FocusTasksController.cs",
+              "RelativeToolTip": "Controllers\\FocusTasksController.cs",
+              "ViewState": "AgIAABUAAAAAAAAAAAA1wAwAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T09:34:59.637Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "FocusTaskService .cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Tasks\\FocusTaskService .cs",
+              "RelativeDocumentMoniker": "Services\\Tasks\\FocusTaskService .cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Tasks\\FocusTaskService .cs",
+              "RelativeToolTip": "Services\\Tasks\\FocusTaskService .cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T09:31:59.487Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "FocusOutputResponse.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Task\\FocusOutputResponse.cs",
+              "RelativeDocumentMoniker": "DTOs\\Task\\FocusOutputResponse.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Task\\FocusOutputResponse.cs",
+              "RelativeToolTip": "DTOs\\Task\\FocusOutputResponse.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T08:17:42.566Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "IFocusTaskService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Interfaces\\IFocusTaskService.cs",
+              "RelativeDocumentMoniker": "Interfaces\\IFocusTaskService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Interfaces\\IFocusTaskService.cs",
+              "RelativeToolTip": "Interfaces\\IFocusTaskService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAxAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T09:01:43.184Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "FocusSession.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\FocusSession.cs",
+              "RelativeDocumentMoniker": "Models\\FocusSession.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\FocusSession.cs",
+              "RelativeToolTip": "Models\\FocusSession.cs",
+              "ViewState": "AgIAABQAAAAAAAAAAAAzwCgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T09:18:34.107Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "FocusTaskResponse.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Task\\FocusTaskResponse.cs",
+              "RelativeDocumentMoniker": "DTOs\\Task\\FocusTaskResponse.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Task\\FocusTaskResponse.cs",
+              "RelativeToolTip": "DTOs\\Task\\FocusTaskResponse.cs",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAmwB4AAABHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T08:16:16.279Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "FocusTask.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\FocusTask.cs",
+              "RelativeDocumentMoniker": "Models\\FocusTask.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\FocusTask.cs",
+              "RelativeToolTip": "Models\\FocusTask.cs",
+              "ViewState": "AgIAACAAAAAAAAAAAAAQwDQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T09:18:42.704Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "FocusOutput.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\FocusOutput.cs",
+              "RelativeDocumentMoniker": "Models\\FocusOutput.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\FocusOutput.cs",
+              "RelativeToolTip": "Models\\FocusOutput.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAQwBgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T09:18:22.162Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "CreateFocusTaskRequest.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Task\\CreateFocusTaskRequest.cs",
+              "RelativeDocumentMoniker": "DTOs\\Task\\CreateFocusTaskRequest.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Task\\CreateFocusTaskRequest.cs",
+              "RelativeToolTip": "DTOs\\Task\\CreateFocusTaskRequest.cs",
+              "ViewState": "AgIAABEAAAAAAAAAAAA8wB8AAAA6AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T08:17:57.298Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "UpdateFocusTaskRequest.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Task\\UpdateFocusTaskRequest.cs",
+              "RelativeDocumentMoniker": "DTOs\\Task\\UpdateFocusTaskRequest.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Task\\UpdateFocusTaskRequest.cs",
+              "RelativeToolTip": "DTOs\\Task\\UpdateFocusTaskRequest.cs",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAYwCEAAAA6AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T08:18:30.439Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "FocusTaskRepository.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Repositories\\FocusTaskRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\FocusTaskRepository.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Repositories\\FocusTaskRepository.cs",
+              "RelativeToolTip": "Repositories\\FocusTaskRepository.cs",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAQwDAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-27T08:47:58.158Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "UserRepository.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Repositories\\UserRepository.cs",
+              "RelativeDocumentMoniker": "Repositories\\UserRepository.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Repositories\\UserRepository.cs",
+              "RelativeToolTip": "Repositories\\UserRepository.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T02:31:37.327Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "UserService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Users\\UserService.cs",
+              "RelativeDocumentMoniker": "Services\\Users\\UserService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Users\\UserService.cs",
+              "RelativeToolTip": "Services\\Users\\UserService.cs",
+              "ViewState": "AgIAADwAAAAAAAAAAAAswEoAAAAtAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T11:28:07.934Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 30,
+              "Title": "IAuthService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Interfaces\\IAuthService.cs",
+              "RelativeDocumentMoniker": "Interfaces\\IAuthService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Interfaces\\IAuthService.cs",
+              "RelativeToolTip": "Interfaces\\IAuthService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T02:20:41.572Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 29,
+              "Title": "AuthResponse.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Auth\\AuthResponse.cs",
+              "RelativeDocumentMoniker": "DTOs\\Auth\\AuthResponse.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Auth\\AuthResponse.cs",
+              "RelativeToolTip": "DTOs\\Auth\\AuthResponse.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T11:18:44.778Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "PasswordService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Auth\\PasswordService.cs",
+              "RelativeDocumentMoniker": "Services\\Auth\\PasswordService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Auth\\PasswordService.cs",
+              "RelativeToolTip": "Services\\Auth\\PasswordService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T11:18:35.429Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "AuthService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Auth\\AuthService.cs",
+              "RelativeDocumentMoniker": "Services\\Auth\\AuthService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Auth\\AuthService.cs",
+              "RelativeToolTip": "Services\\Auth\\AuthService.cs",
+              "ViewState": "AgIAAN0AAAAAAAAAAAA3wPMAAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T11:18:28.69Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "JwtService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Auth\\JwtService.cs",
+              "RelativeDocumentMoniker": "Services\\Auth\\JwtService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Services\\Auth\\JwtService.cs",
+              "RelativeToolTip": "Services\\Auth\\JwtService.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAABEAAAA/AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T11:18:29.299Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "User.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\User.cs",
+              "RelativeDocumentMoniker": "Models\\User.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\User.cs",
+              "RelativeToolTip": "Models\\User.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T11:18:48.736Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "UsersController.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Controllers\\UsersController.cs",
+              "RelativeDocumentMoniker": "Controllers\\UsersController.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Controllers\\UsersController.cs",
+              "RelativeToolTip": "Controllers\\UsersController.cs",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAxwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T13:25:53.384Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "IUserService.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Interfaces\\IUserService.cs",
+              "RelativeDocumentMoniker": "Interfaces\\IUserService.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Interfaces\\IUserService.cs",
+              "RelativeToolTip": "Interfaces\\IUserService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T13:26:02.249Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 35,
+              "Title": "UserSetting.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\UserSetting.cs",
+              "RelativeDocumentMoniker": "Models\\UserSetting.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\UserSetting.cs",
+              "RelativeToolTip": "Models\\UserSetting.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T03:03:54.099Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 32,
+              "Title": "GoogleLoginRequest.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Auth\\GoogleLoginRequest.cs",
+              "RelativeDocumentMoniker": "DTOs\\Auth\\GoogleLoginRequest.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Auth\\GoogleLoginRequest.cs",
+              "RelativeToolTip": "DTOs\\Auth\\GoogleLoginRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T11:18:45.972Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 33,
+              "Title": "LoginRequest.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Auth\\LoginRequest.cs",
+              "RelativeDocumentMoniker": "DTOs\\Auth\\LoginRequest.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Auth\\LoginRequest.cs",
+              "RelativeToolTip": "DTOs\\Auth\\LoginRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T11:18:47.512Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 31,
+              "Title": "RegisterRequest.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Auth\\RegisterRequest.cs",
+              "RelativeDocumentMoniker": "DTOs\\Auth\\RegisterRequest.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\DTOs\\Auth\\RegisterRequest.cs",
+              "RelativeToolTip": "DTOs\\Auth\\RegisterRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T11:18:50.305Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 36,
+              "Title": "AiFocusEvaluation.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\AiFocusEvaluation.cs",
+              "RelativeDocumentMoniker": "Models\\AiFocusEvaluation.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Models\\AiFocusEvaluation.cs",
+              "RelativeToolTip": "Models\\AiFocusEvaluation.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T03:01:20.736Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 34,
+              "Title": "AppDbContext.cs",
+              "DocumentMoniker": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Data\\AppDbContext.cs",
+              "RelativeDocumentMoniker": "Data\\AppDbContext.cs",
+              "ToolTip": "D:\\ProjectPRM393\\BE_MyTime\\BE_MyTime\\Data\\AppDbContext.cs",
+              "RelativeToolTip": "Data\\AppDbContext.cs",
+              "ViewState": "AgIAAEgBAAAAAAAAAAAEwFoBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T03:01:07.349Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

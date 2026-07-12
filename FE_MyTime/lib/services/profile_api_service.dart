@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:project/core/config/api_config.dart';
 import 'package:project/models/user_profile.dart';
 
 class ProfileApiService {
@@ -8,7 +9,7 @@ class ProfileApiService {
 
   static final ProfileApiService instance = ProfileApiService._();
 
-  static const String baseUrl = 'https://localhost:7063';
+  static String get baseUrl => ApiConfig.baseUrl;
 
   Future<UserProfile> getMe(String token) async {
     final response = await http.get(

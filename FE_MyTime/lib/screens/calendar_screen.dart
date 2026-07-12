@@ -21,6 +21,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final store = MyTimeStore.instance;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendar'),
@@ -33,7 +34,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       ),
       body: AnimatedBuilder(
-        animation: MyTimeStore.instance,
+        animation: store,
         builder: (context, child) {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
@@ -44,6 +45,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 onNextMonth: () => _moveMonth(1),
                 onSelectDate: (date) {
                   setState(() => _selectedDate = date);
+                  store.updateSelectedCalendarDate(date);
                 },
               ),
               const SizedBox(height: 14),
@@ -86,6 +88,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _selectedDate = date;
               _view = CalendarViewType.day;
             });
+            MyTimeStore.instance.updateSelectedCalendarDate(date);
           },
           onOpenTask: _openTask,
           onEditTask: _editTask,
@@ -99,6 +102,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _selectedDate = date;
               _view = CalendarViewType.day;
             });
+            MyTimeStore.instance.updateSelectedCalendarDate(date);
           },
           onOpenTask: _openTask,
           onEditTask: _editTask,
@@ -259,9 +263,9 @@ class _MonthCalendarCard extends StatelessWidget {
             itemCount: totalCells,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.92,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              mainAxisExtent: 40,
             ),
             itemBuilder: (context, index) {
               final date = monthStart.add(Duration(days: index - firstOffset));
@@ -299,6 +303,7 @@ class _WeekdayLabel extends StatelessWidget {
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: AppColors.textMuted,
+          fontSize: 12,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -329,17 +334,17 @@ class _CalendarDayCell extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(vertical: 7),
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary
               : hasTasks
               ? AppColors.surfaceSoft
               : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
                 ? AppColors.primary
@@ -357,8 +362,8 @@ class _CalendarDayCell extends StatelessWidget {
                 ]
               : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
             Text(
               '${date.day}',
@@ -368,35 +373,34 @@ class _CalendarDayCell extends StatelessWidget {
                     : inMonth
                     ? AppColors.textPrimary
                     : AppColors.textMuted.withValues(alpha: 0.55),
+                fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 5),
             if (hasTasks)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : AppColors.primary,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '$taskCount',
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primary : Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
+              Positioned(
+                bottom: 4,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.white : AppColors.primary,
+                    shape: BoxShape.circle,
                   ),
                 ),
               )
             else
-              Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: isToday
-                      ? AppColors.primary.withValues(alpha: 0.6)
-                      : Colors.transparent,
-                  shape: BoxShape.circle,
+              Positioned(
+                bottom: 4,
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: isToday
+                        ? AppColors.primary.withValues(alpha: 0.6)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
           ],
@@ -792,10 +796,20 @@ class _TaskTile extends StatelessWidget {
             leading: _TaskIcon(task: task),
             title: Text(
               task.title,
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                decoration: task.isCompleted
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
+                color: task.isCompleted
+                    ? AppColors.textSecondary
+                    : AppColors.textPrimary,
+              ),
             ),
             subtitle: Text(_taskSubtitle(task)),
-            trailing: const Icon(Icons.chevron_right_rounded),
+            trailing: _TaskCompletionButton(task: task),
             onTap: onTap,
           ),
         ),
@@ -843,9 +857,16 @@ class _CompactTaskTile extends StatelessWidget {
                   children: [
                     Text(
                       task.title,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: task.isCompleted
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
+                        decoration: task.isCompleted
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -859,12 +880,43 @@ class _CompactTaskTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textMuted,
-              ),
+              _TaskCompletionButton(task: task),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskCompletionButton extends StatelessWidget {
+  const _TaskCompletionButton({required this.task});
+
+  final FocusTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        MyTimeStore.instance.setTaskCompleted(task, !task.isCompleted);
+      },
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: task.isCompleted ? AppColors.primary : Colors.transparent,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: task.isCompleted ? AppColors.primary : AppColors.textMuted,
+            width: 1.6,
+          ),
+        ),
+        child: Icon(
+          Icons.check_rounded,
+          size: 18,
+          color: task.isCompleted ? Colors.white : Colors.transparent,
         ),
       ),
     );

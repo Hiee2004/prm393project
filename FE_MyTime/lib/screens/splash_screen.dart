@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:project/core/routes/app_routes.dart';
+import 'package:project/core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,17 +14,16 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
+  static const _splashDuration = Duration(milliseconds: 1800);
   late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..forward();
+    _controller = AnimationController(vsync: this, duration: _splashDuration)
+      ..forward();
 
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(_splashDuration, () {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
     });
@@ -37,8 +37,12 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scene = theme.extension<AppSceneTheme>()!;
+    final isDark = theme.brightness == Brightness.dark;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         body: AnimatedBuilder(
           animation: _controller,
@@ -49,23 +53,36 @@ class _SplashScreenState extends State<SplashScreen>
             return Container(
               width: double.infinity,
               height: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFFB700),
-                    Color(0xFFFFC928),
-                    Color(0xFFFFE7A6),
-                  ],
+                  colors: scene.backgroundGradient,
                 ),
               ),
               child: Stack(
                 children: [
-                  ...List.generate(12, (index) {
-                    return _FallingSplashLeaf(
-                      progress: (_controller.value + index * 0.09) % 1,
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            scene.overlay,
+                            scene.overlay.withValues(alpha: 0.32),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  ...List.generate(8, (index) {
+                    return _FloatingSplashAccent(
+                      progress: (_controller.value + index * 0.08) % 1,
                       index: index,
+                      icon: scene.floatingIcon,
+                      color: theme.colorScheme.onSurface,
                     );
                   }),
                   Center(
@@ -78,31 +95,44 @@ class _SplashScreenState extends State<SplashScreen>
                           children: [
                             Transform.scale(
                               scale: pulse,
-                              child: const Text(
-                                '🍁',
-                                style: TextStyle(
-                                  fontSize: 116,
-                                  color: Colors.white,
+                              child: Container(
+                                width: 132,
+                                height: 132,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: theme.colorScheme.surface.withValues(
+                                    alpha: isDark ? 0.36 : 0.54,
+                                  ),
+                                  border: Border.all(color: scene.cardBorder),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: scene.navGlow,
+                                      blurRadius: 26,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  scene.accentIcon,
+                                  size: 64,
+                                  color: theme.colorScheme.primary,
                                 ),
                               ),
                             ),
                             const SizedBox(height: 22),
-                            const Text(
+                            Text(
                               'MyTime',
-                              style: TextStyle(
-                                color: Color(0xFF2A2418),
-                                fontSize: 36,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.6,
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              'Focus - Plan - Achieve',
-                              style: TextStyle(
-                                color: Color(0xFF5C4614),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
+                            Text(
+                              '${scene.label} focus world',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.82,
+                                ),
                               ),
                             ),
                           ],
@@ -119,8 +149,10 @@ class _SplashScreenState extends State<SplashScreen>
                       child: LinearProgressIndicator(
                         value: _controller.value,
                         minHeight: 5,
-                        color: Colors.white,
-                        backgroundColor: Colors.white.withValues(alpha: 0.32),
+                        color: theme.colorScheme.primary,
+                        backgroundColor: theme.colorScheme.surface.withValues(
+                          alpha: isDark ? 0.34 : 0.42,
+                        ),
                       ),
                     ),
                   ),
@@ -134,11 +166,18 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _FallingSplashLeaf extends StatelessWidget {
-  const _FallingSplashLeaf({required this.progress, required this.index});
+class _FloatingSplashAccent extends StatelessWidget {
+  const _FloatingSplashAccent({
+    required this.progress,
+    required this.index,
+    required this.icon,
+    required this.color,
+  });
 
   final double progress;
   final int index;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -153,12 +192,10 @@ class _FallingSplashLeaf extends StatelessWidget {
       child: IgnorePointer(
         child: Transform.rotate(
           angle: progress * math.pi * 2 + index,
-          child: Text(
-            '🍁',
-            style: TextStyle(
-              fontSize: 18 + (index % 5) * 7,
-              color: Colors.white.withValues(alpha: opacity),
-            ),
+          child: Icon(
+            icon,
+            size: 18 + (index % 5) * 7,
+            color: color.withValues(alpha: opacity),
           ),
         ),
       ),
