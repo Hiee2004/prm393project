@@ -222,7 +222,7 @@ class _DashboardDrawer extends StatelessWidget {
                 ),
                 _DrawerTile(
                   icon: Icons.local_fire_department_outlined,
-                  label: 'Habits',
+                  label: 'Streak',
                   color: theme.colorScheme.secondary,
                   onTap: () => _push(context, AppRoutes.habits),
                 ),

@@ -44,6 +44,8 @@ namespace BE_MyTime.Services.Habits
 
         public async Task<HabitResponse> CreateHabitAsync(int userId, CreateHabitRequest request)
         {
+            ValidateHabitRequest(request.Title, request.TargetCount);
+
             var habit = new Habit
             {
                 UserId = userId,
@@ -66,6 +68,8 @@ namespace BE_MyTime.Services.Habits
 
         public async Task<HabitResponse?> UpdateHabitAsync(int id, int userId, UpdateHabitRequest request)
         {
+            ValidateHabitRequest(request.Title, request.TargetCount);
+
             var habit = await _repository.GetByIdAsync(id, userId);
             if (habit == null)
             {
@@ -125,6 +129,19 @@ namespace BE_MyTime.Services.Habits
 
             await _repository.SaveChangesAsync();
             return MapHabit(habit);
+        }
+
+        private static void ValidateHabitRequest(string? title, int targetCount)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                throw new InvalidOperationException("Habit title is required.");
+            }
+
+            if (targetCount <= 0)
+            {
+                throw new InvalidOperationException("Habit target count must be greater than 0.");
+            }
         }
 
         public async Task<bool> DeleteHabitAsync(int id, int userId)

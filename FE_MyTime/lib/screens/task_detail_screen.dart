@@ -31,12 +31,20 @@ class TaskDetailScreen extends StatelessWidget {
     );
 
     if (shouldDelete == true && context.mounted) {
-      MyTimeStore.instance.deleteTask(task);
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.tasks,
-        (route) => route.isFirst,
-      );
+      try {
+        await MyTimeStore.instance.deleteTask(task);
+        if (!context.mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.tasks,
+          (route) => route.isFirst,
+        );
+      } catch (error) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     }
   }
 

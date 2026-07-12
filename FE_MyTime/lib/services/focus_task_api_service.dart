@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:project/core/config/api_config.dart';
 import 'package:project/models/focus_task.dart';
+import 'package:project/services/api_error.dart';
 
 class FocusTaskApiService {
   FocusTaskApiService._();
@@ -16,7 +17,7 @@ class FocusTaskApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Load tasks failed: ${response.body}');
+      throw buildApiException(response, fallbackMessage: 'Load tasks failed.');
     }
 
     final data = jsonDecode(response.body) as List;
@@ -40,7 +41,10 @@ class FocusTaskApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Create task failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Create task failed.',
+      );
     }
 
     return FocusTask.fromJson(jsonDecode(response.body));
@@ -60,7 +64,10 @@ class FocusTaskApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Update task failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Update task failed.',
+      );
     }
 
     return FocusTask.fromJson(jsonDecode(response.body));
@@ -76,7 +83,10 @@ class FocusTaskApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Delete task failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Delete task failed.',
+      );
     }
   }
 }

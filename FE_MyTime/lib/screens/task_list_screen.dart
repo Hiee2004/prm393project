@@ -81,11 +81,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
 
     if (shouldDelete == true) {
-      await MyTimeStore.instance.deleteTask(task);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Task deleted.')));
+      try {
+        await MyTimeStore.instance.deleteTask(task);
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Task deleted.')));
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     }
   }
 

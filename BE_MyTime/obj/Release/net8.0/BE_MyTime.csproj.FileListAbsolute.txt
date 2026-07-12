@@ -138,3 +138,4 @@ D:\ProjectPRM393\BE_MyTime\BE_MyTime\obj\Release\net8.0\refint\BE_MyTime.dll
 D:\ProjectPRM393\BE_MyTime\BE_MyTime\obj\Release\net8.0\BE_MyTime.pdb
 D:\ProjectPRM393\BE_MyTime\BE_MyTime\obj\Release\net8.0\BE_MyTime.genruntimeconfig.cache
 D:\ProjectPRM393\BE_MyTime\BE_MyTime\obj\Release\net8.0\ref\BE_MyTime.dll
+D:\ProjectPRM393\BE_MyTime\BE_MyTime\bin\Release\net8.0\BE_MyTime.exe

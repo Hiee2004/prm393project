@@ -113,7 +113,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   bool _focusLockEnabled = false;
   DateTime? _startedAt;
   _FocusTemplate? _selectedTemplate;
-  _FocusSoundProfile _selectedSound = _soundProfiles.first;
+  _FocusSoundProfile _selectedSound = _soundProfiles[1];
 
   @override
   void initState() {

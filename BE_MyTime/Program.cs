@@ -4,15 +4,19 @@ using BE_MyTime.Repositories;
 using BE_MyTime.Services.Auth;
 using BE_MyTime.Services.AI;
 using BE_MyTime.Services.Habits;
+using BE_MyTime.Services.Streaks;
 using BE_MyTime.Services.Tasks;
 using BE_MyTime.Services.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Text.Json;
 
 namespace BE_MyTime
 {
@@ -50,6 +54,27 @@ namespace BE_MyTime
             });
 
             builder.Services.AddControllers();
+            builder.Services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var errors = context.ModelState
+                        .Where(entry => entry.Value?.Errors.Count > 0)
+                        .ToDictionary(
+                            entry => entry.Key,
+                            entry => entry.Value!.Errors
+                                .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                                    ? "Invalid value."
+                                    : error.ErrorMessage)
+                                .ToArray());
+
+                    return new BadRequestObjectResult(new
+                    {
+                        message = "Validation failed.",
+                        errors
+                    });
+                };
+            });
             builder.Services.AddHttpClient();
             var dataProtectionPath = Path.Combine(
                 AppContext.BaseDirectory,
@@ -72,6 +97,7 @@ namespace BE_MyTime
                 IFocusTaskService,
                 FocusTaskService>();
             builder.Services.AddScoped<IHabitService, HabitService>();
+            builder.Services.AddScoped<IProductivityStreakService, ProductivityStreakService>();
             builder.Services.AddScoped<IAiTimeManagerService, AiTimeManagerService>();
             builder.Services.AddScoped<FocusSessionRepository>();
 
@@ -138,6 +164,29 @@ namespace BE_MyTime
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseExceptionHandler(errorApp =>
+            {
+                errorApp.Run(async context =>
+                {
+                    var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+                    var (statusCode, message) = exception switch
+                    {
+                        UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, exception.Message),
+                        InvalidOperationException => (StatusCodes.Status400BadRequest, exception.Message),
+                        KeyNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
+                        _ => (StatusCodes.Status500InternalServerError, "An unexpected server error occurred.")
+                    };
+
+                    context.Response.StatusCode = statusCode;
+                    context.Response.ContentType = "application/json";
+
+                    await context.Response.WriteAsync(JsonSerializer.Serialize(new
+                    {
+                        message
+                    }));
+                });
+            });
 
             if (!app.Environment.IsDevelopment())
             {

@@ -1,7 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace BE_MyTime.DTOs.Users
 {
     public class UpdateUserSettingRequest
     {
+        [Range(1, 300)]
         public int DefaultFocusMinutes { get; set; } = 25;
 
         public bool NotificationEnabled { get; set; } = true;
@@ -16,8 +19,10 @@ namespace BE_MyTime.DTOs.Users
 
         public TimeSpan? PreferredFocusEndTime { get; set; }
 
+        [MaxLength(80)]
         public string TimeZone { get; set; } = "Asia/Ho_Chi_Minh";
 
+        [MaxLength(50)]
         public string ThemeMode { get; set; } = "Light";
 
         public string? EnergyProfileJson { get; set; }

@@ -32,6 +32,8 @@
 
         public bool SyncToGoogleCalendar { get; set; }
 
+        public DateTime? CompletedAt { get; set; }
+
         public List<FocusOutputResponse> Outputs { get; set; } = new();
     }
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:project/core/config/api_config.dart';
+import 'package:project/services/api_error.dart';
 
 class UserApiService {
   static String get baseUrl => ApiConfig.baseUrl;
@@ -82,6 +83,9 @@ class UserApiService {
       return body;
     }
 
-    throw Exception(body['message'] ?? 'API error');
+    throw buildApiException(
+      response,
+      fallbackMessage: body['message']?.toString() ?? 'API error',
+    );
   }
 }

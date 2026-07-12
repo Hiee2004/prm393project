@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:project/core/config/api_config.dart';
 import 'package:project/models/user_setting.dart';
+import 'package:project/services/api_error.dart';
 
 class SettingsApiService {
   SettingsApiService._();
@@ -17,7 +18,10 @@ class SettingsApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Load settings failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Load settings failed.',
+      );
     }
 
     return UserSetting.fromJson(jsonDecode(response.body));
@@ -37,7 +41,10 @@ class SettingsApiService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Update settings failed: ${response.body}');
+      throw buildApiException(
+        response,
+        fallbackMessage: 'Update settings failed.',
+      );
     }
 
     return UserSetting.fromJson(jsonDecode(response.body));

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:project/core/config/api_config.dart';
+import 'package:project/services/api_error.dart';
 
 class AuthApiService {
   static String get baseUrl => ApiConfig.baseUrl;
@@ -43,7 +44,10 @@ class AuthApiService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
-    throw Exception(body['message'] ?? 'API error');
+    throw buildApiException(
+      response,
+      fallbackMessage: body['message']?.toString() ?? 'Authentication failed.',
+    );
   }
 
   Future<Map<String, dynamic>> loginWithGoogle(String idToken) async {
