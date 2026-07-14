@@ -9,12 +9,14 @@ class FocusOutput {
     this.id,
     required this.title,
     this.isCompleted = false,
+    this.completedAt,
     this.sortOrder = 0,
   });
 
   final int? id;
   final String title;
   bool isCompleted;
+  DateTime? completedAt;
   final int sortOrder;
 
   factory FocusOutput.fromJson(Map<String, dynamic> json) {
@@ -22,8 +24,21 @@ class FocusOutput {
       id: json['id'],
       title: json['title'] ?? '',
       isCompleted: json['isCompleted'] ?? false,
+      completedAt: json['completedAt'] == null
+          ? null
+          : DateTime.parse(json['completedAt']),
       sortOrder: json['sortOrder'] ?? 0,
     );
+  }
+
+  Map<String, dynamic> toUpdateJson(int index) {
+    return {
+      'id': id,
+      'title': title,
+      'isCompleted': isCompleted,
+      'completedAt': completedAt?.toIso8601String(),
+      'sortOrder': index,
+    };
   }
 }
 
@@ -46,6 +61,7 @@ class FocusTask {
     this.syncToGoogleCalendar = false,
     this.status = FocusTaskStatus.todo,
     this.completedAt,
+    this.completionDates = const [],
   }) : scheduledDate = scheduledDate ?? DateTime.now();
 
   final String id;
@@ -65,9 +81,10 @@ class FocusTask {
   bool syncToGoogleCalendar;
   FocusTaskStatus status;
   DateTime? completedAt;
+  List<DateTime> completionDates;
 
   factory FocusTask.fromJson(Map<String, dynamic> json) {
-    return FocusTask(
+    final task = FocusTask(
       id: json['id'].toString(),
       title: json['title'] ?? '',
       description: json['description'] ?? '',
@@ -90,10 +107,22 @@ class FocusTask {
       completedAt: json['completedAt'] == null
           ? null
           : DateTime.parse(json['completedAt']),
+      completionDates: ((json['completionDates'] ?? []) as List)
+          .map((item) => DateTime.parse(item.toString()))
+          .toList(),
       outputs: ((json['outputs'] ?? []) as List)
           .map((item) => FocusOutput.fromJson(item))
           .toList(),
     );
+
+    if (task.repeat != TaskRepeat.none && !task.isCompletedOn(DateTime.now())) {
+      for (final output in task.outputs) {
+        output.isCompleted = false;
+        output.completedAt = null;
+      }
+    }
+
+    return task;
   }
 
   Map<String, dynamic> toCreateJson() {
@@ -115,7 +144,7 @@ class FocusTask {
     };
   }
 
-  Map<String, dynamic> toUpdateJson() {
+  Map<String, dynamic> toUpdateJson({DateTime? occurrenceDate}) {
     return {
       'title': title,
       'description': description,
@@ -131,7 +160,11 @@ class FocusTask {
       'reminderEnabled': reminderEnabled,
       'reminderTime': reminderTime,
       'syncToGoogleCalendar': syncToGoogleCalendar,
-      'outputs': outputs.map((output) => output.title).toList(),
+      'occurrenceDate': occurrenceDate?.toIso8601String(),
+      'outputs': [
+        for (var index = 0; index < outputs.length; index++)
+          outputs[index].toUpdateJson(index),
+      ],
     };
   }
 
@@ -139,7 +172,18 @@ class FocusTask {
     return outputs.where((output) => output.isCompleted).length;
   }
 
-  bool get isCompleted => status == FocusTaskStatus.completed;
+  bool get isCompleted => isCompletedOn(DateTime.now());
+
+  bool isCompletedOn(DateTime date) {
+    if (repeat == TaskRepeat.none) {
+      return status == FocusTaskStatus.completed;
+    }
+
+    final targetDate = _dateOnly(date);
+    return completionDates.any(
+      (completedDate) => _isSameDate(_dateOnly(completedDate), targetDate),
+    );
+  }
 
   bool get canStartToday => occursOn(DateTime.now());
 

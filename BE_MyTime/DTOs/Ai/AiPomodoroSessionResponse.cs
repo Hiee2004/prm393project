@@ -10,6 +10,8 @@ namespace BE_MyTime.DTOs.Ai
 
         public int DurationMinutes { get; set; }
 
+        public bool IsBreak { get; set; }
+
         public DateTime ScheduledDate { get; set; }
 
         public TimeSpan StartTime { get; set; }

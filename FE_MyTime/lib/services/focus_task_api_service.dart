@@ -53,6 +53,7 @@ class FocusTaskApiService {
   Future<FocusTask> updateTask({
     required String token,
     required FocusTask task,
+    DateTime? occurrenceDate,
   }) async {
     final response = await http.put(
       Uri.parse('${ApiConfig.baseUrl}/api/FocusTasks/${task.id}'),
@@ -60,7 +61,7 @@ class FocusTaskApiService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode(task.toUpdateJson()),
+      body: jsonEncode(task.toUpdateJson(occurrenceDate: occurrenceDate)),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {

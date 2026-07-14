@@ -30,7 +30,7 @@ namespace BE_MyTime.Services.Tasks
             int userId,
             CreateFocusTaskRequest request)
         {
-            ValidateRequest(request.Title, request.Outputs);
+            ValidateCreateRequest(request.Title, request.Outputs);
 
             var task = new FocusTask
             {
@@ -68,7 +68,7 @@ namespace BE_MyTime.Services.Tasks
             int userId,
             UpdateFocusTaskRequest request)
         {
-            ValidateRequest(request.Title, request.Outputs);
+            ValidateUpdateRequest(request.Title, request.Outputs);
 
             var task = await _repository.GetByIdAsync(id, userId);
             if (task == null) return null;
@@ -90,27 +90,92 @@ namespace BE_MyTime.Services.Tasks
             task.ReminderTime = request.ReminderTime;
             task.SyncToGoogleCalendar = request.SyncToGoogleCalendar;
             task.UpdatedAt = DateTime.UtcNow;
+            var occurrenceDate = request.OccurrenceDate?.Date;
 
-            if (task.Status == FocusTaskStatus.Completed)
+            if (task.Repeat != TaskRepeat.None && occurrenceDate.HasValue)
             {
-                if (previousStatus != FocusTaskStatus.Completed || task.CompletedAt == null)
+                var existingCompletion = task.CompletionLogs
+                    .FirstOrDefault(item => item.CompletedOn.Date == occurrenceDate.Value);
+
+                if (task.Status == FocusTaskStatus.Completed)
                 {
-                    task.CompletedAt = DateTime.UtcNow;
+                    if (existingCompletion == null)
+                    {
+                        task.CompletionLogs.Add(new FocusTaskCompletion
+                        {
+                            FocusTaskId = task.Id,
+                            CompletedOn = occurrenceDate.Value,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
                 }
+                else if (existingCompletion != null)
+                {
+                    task.CompletionLogs.Remove(existingCompletion);
+                }
+
+                task.Status = previousStatus == FocusTaskStatus.Processing
+                    ? FocusTaskStatus.Processing
+                    : FocusTaskStatus.Todo;
+                task.CompletedAt = task.CompletionLogs
+                    .OrderByDescending(item => item.CompletedOn)
+                    .Select(item => (DateTime?)item.CompletedOn)
+                    .FirstOrDefault();
             }
             else
             {
-                task.CompletedAt = null;
+                if (task.Status == FocusTaskStatus.Completed)
+                {
+                    if (previousStatus != FocusTaskStatus.Completed || task.CompletedAt == null)
+                    {
+                        task.CompletedAt = DateTime.UtcNow;
+                    }
+                }
+                else
+                {
+                    task.CompletedAt = null;
+                }
             }
 
-            task.Outputs.Clear();
+            var existingOutputs = task.Outputs.ToDictionary(output => output.Id);
+            var incomingOutputIds = request.Outputs
+                .Where(output => output.Id.HasValue && output.Id.Value > 0)
+                .Select(output => output.Id!.Value)
+                .ToHashSet();
 
-            foreach (var item in request.Outputs.Select((title, index) => new { title, index }))
+            var outputsToRemove = task.Outputs
+                .Where(output => !incomingOutputIds.Contains(output.Id))
+                .ToList();
+
+            foreach (var output in outputsToRemove)
             {
+                task.Outputs.Remove(output);
+            }
+
+            foreach (var item in request.Outputs.Select((output, index) => new { output, index }))
+            {
+                var requestedOutput = item.output;
+                var normalizedTitle = requestedOutput.Title.Trim();
+                DateTime? completedAt = requestedOutput.IsCompleted
+                    ? requestedOutput.CompletedAt ?? DateTime.UtcNow
+                    : null;
+
+                if (requestedOutput.Id.HasValue &&
+                    existingOutputs.TryGetValue(requestedOutput.Id.Value, out var existingOutput))
+                {
+                    existingOutput.Title = normalizedTitle;
+                    existingOutput.IsCompleted = requestedOutput.IsCompleted;
+                    existingOutput.CompletedAt = completedAt;
+                    existingOutput.SortOrder = item.index;
+                    continue;
+                }
+
                 task.Outputs.Add(new FocusOutput
                 {
                     FocusTaskId = task.Id,
-                    Title = item.title.Trim(),
+                    Title = normalizedTitle,
+                    IsCompleted = requestedOutput.IsCompleted,
+                    CompletedAt = completedAt,
                     SortOrder = item.index,
                     CreatedAt = DateTime.UtcNow
                 });
@@ -140,7 +205,7 @@ namespace BE_MyTime.Services.Tasks
                 : fallback;
         }
 
-        private static void ValidateRequest(string? title, List<string>? outputs)
+        private static void ValidateCreateRequest(string? title, List<string>? outputs)
         {
             if (string.IsNullOrWhiteSpace(title))
             {
@@ -153,6 +218,26 @@ namespace BE_MyTime.Services.Tasks
             }
 
             if (outputs.Any(output => string.IsNullOrWhiteSpace(output)))
+            {
+                throw new InvalidOperationException("Outputs cannot be empty.");
+            }
+        }
+
+        private static void ValidateUpdateRequest(
+            string? title,
+            List<FocusTaskOutputUpsertRequest>? outputs)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                throw new InvalidOperationException("Task title is required.");
+            }
+
+            if (outputs == null || outputs.Count == 0)
+            {
+                throw new InvalidOperationException("At least one output is required.");
+            }
+
+            if (outputs.Any(output => string.IsNullOrWhiteSpace(output.Title)))
             {
                 throw new InvalidOperationException("Outputs cannot be empty.");
             }
@@ -185,8 +270,13 @@ namespace BE_MyTime.Services.Tasks
                         Id = o.Id,
                         Title = o.Title,
                         IsCompleted = o.IsCompleted,
+                        CompletedAt = o.CompletedAt,
                         SortOrder = o.SortOrder
                     })
+                    .ToList(),
+                CompletionDates = task.CompletionLogs
+                    .OrderBy(item => item.CompletedOn)
+                    .Select(item => item.CompletedOn)
                     .ToList()
             };
         }

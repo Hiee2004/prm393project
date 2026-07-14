@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BE_MyTime.DTOs.Ai;
+using BE_MyTime.DTOs.Task;
 using BE_MyTime.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,6 +44,30 @@ namespace BE_MyTime.Controllers
         public async Task<ActionResult<AiDailySuggestionResponse>> DailySuggestion()
         {
             var response = await _aiTimeManagerService.GetDailySuggestionAsync(GetCurrentUserId());
+            return Ok(response);
+        }
+
+        [HttpGet("tasks/{taskId:int}/smart-plan")]
+        public async Task<ActionResult<AiSmartTaskPlanResponse>> GenerateSmartTaskPlan(
+            int taskId,
+            [FromQuery] string mode = "Detailed")
+        {
+            var response = await _aiTimeManagerService.GenerateSmartTaskPlanAsync(
+                GetCurrentUserId(),
+                taskId,
+                mode);
+            return Ok(response);
+        }
+
+        [HttpPost("tasks/{taskId:int}/apply-smart-plan")]
+        public async Task<ActionResult<FocusTaskResponse>> ApplySmartTaskPlan(
+            int taskId,
+            ApplySmartTaskPlanRequest request)
+        {
+            var response = await _aiTimeManagerService.ApplySmartTaskPlanAsync(
+                GetCurrentUserId(),
+                taskId,
+                request);
             return Ok(response);
         }
 

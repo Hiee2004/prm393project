@@ -40,7 +40,9 @@ namespace BE_MyTime.DTOs.Task
 
         public bool SyncToGoogleCalendar { get; set; }
 
+        public DateTime? OccurrenceDate { get; set; }
+
         [MinLength(1)]
-        public List<string> Outputs { get; set; } = new();
+        public List<FocusTaskOutputUpsertRequest> Outputs { get; set; } = new();
     }
 }

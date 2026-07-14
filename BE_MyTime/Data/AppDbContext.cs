@@ -19,6 +19,8 @@ namespace BE_MyTime.Data
 
         public DbSet<FocusSession> FocusSessions => Set<FocusSession>();
 
+        public DbSet<FocusTaskCompletion> FocusTaskCompletions => Set<FocusTaskCompletion>();
+
         public DbSet<DistractionEvent> DistractionEvents => Set<DistractionEvent>();
 
         public DbSet<AiFocusEvaluation> AiFocusEvaluations => Set<AiFocusEvaluation>();
@@ -30,12 +32,6 @@ namespace BE_MyTime.Data
         public DbSet<GoogleCalendarLink> GoogleCalendarLinks => Set<GoogleCalendarLink>();
 
         public DbSet<ScheduledTask> ScheduledTasks => Set<ScheduledTask>();
-
-        public DbSet<Habit> Habits => Set<Habit>();
-
-        public DbSet<HabitLog> HabitLogs => Set<HabitLog>();
-
-        public DbSet<UserProgress> UserProgresses => Set<UserProgress>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -45,15 +41,13 @@ namespace BE_MyTime.Data
             ConfigureFocusTasks(modelBuilder);
             ConfigureFocusOutputs(modelBuilder);
             ConfigureFocusSessions(modelBuilder);
+            ConfigureFocusTaskCompletions(modelBuilder);
             ConfigureDistractionEvents(modelBuilder);
             ConfigureAiFocusEvaluations(modelBuilder);
             ConfigureNotifications(modelBuilder);
             ConfigureAiPlanDrafts(modelBuilder);
             ConfigureGoogleCalendarLinks(modelBuilder);
             ConfigureScheduledTasks(modelBuilder);
-            ConfigureHabits(modelBuilder);
-            ConfigureHabitLogs(modelBuilder);
-            ConfigureUserProgress(modelBuilder);
         }
 
         private static void ConfigureUsers(ModelBuilder modelBuilder)
@@ -447,6 +441,30 @@ namespace BE_MyTime.Data
             });
         }
 
+        private static void ConfigureFocusTaskCompletions(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<FocusTaskCompletion>(entity =>
+            {
+                entity.ToTable("focus_task_completions");
+
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.CompletedOn)
+                    .HasColumnType("date");
+
+                entity.Property(x => x.CreatedAt)
+                    .HasDefaultValueSql("GETUTCDATE()");
+
+                entity.HasIndex(x => new { x.FocusTaskId, x.CompletedOn })
+                    .IsUnique();
+
+                entity.HasOne(x => x.FocusTask)
+                    .WithMany(x => x.CompletionLogs)
+                    .HasForeignKey(x => x.FocusTaskId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
         private static void ConfigureScheduledTasks(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ScheduledTask>(entity =>
@@ -484,106 +502,5 @@ namespace BE_MyTime.Data
             });
         }
 
-        private static void ConfigureHabits(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<Habit>(entity =>
-            {
-                entity.ToTable("habits");
-
-                entity.HasKey(x => x.Id);
-
-                entity.Property(x => x.Title)
-                    .IsRequired()
-                    .HasMaxLength(160);
-
-                entity.Property(x => x.Description)
-                    .HasMaxLength(600);
-
-                entity.Property(x => x.FrequencyType)
-                    .HasConversion<string>()
-                    .HasMaxLength(20);
-
-                entity.Property(x => x.WeekDaysCsv)
-                    .HasMaxLength(60);
-
-                entity.Property(x => x.TargetCount)
-                    .HasDefaultValue(1);
-
-                entity.Property(x => x.ColorHex)
-                    .HasMaxLength(20)
-                    .HasDefaultValue("#58CC02");
-
-                entity.Property(x => x.IconName)
-                    .HasMaxLength(40)
-                    .HasDefaultValue("local_fire_department_rounded");
-
-                entity.Property(x => x.IsArchived)
-                    .HasDefaultValue(false);
-
-                entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
-
-                entity.HasIndex(x => new { x.UserId, x.IsArchived });
-
-                entity.HasOne(x => x.User)
-                    .WithMany(x => x.Habits)
-                    .HasForeignKey(x => x.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
-        }
-
-        private static void ConfigureHabitLogs(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<HabitLog>(entity =>
-            {
-                entity.ToTable("habit_logs");
-
-                entity.HasKey(x => x.Id);
-
-                entity.Property(x => x.Count)
-                    .HasDefaultValue(1);
-
-                entity.Property(x => x.IsCompleted)
-                    .HasDefaultValue(false);
-
-                entity.Property(x => x.EarnedXp)
-                    .HasDefaultValue(0);
-
-                entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
-
-                entity.HasIndex(x => new { x.HabitId, x.CompletedOn })
-                    .IsUnique();
-
-                entity.HasOne(x => x.Habit)
-                    .WithMany(x => x.Logs)
-                    .HasForeignKey(x => x.HabitId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
-        }
-
-        private static void ConfigureUserProgress(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<UserProgress>(entity =>
-            {
-                entity.ToTable("user_progress");
-
-                entity.HasKey(x => x.Id);
-
-                entity.HasIndex(x => x.UserId)
-                    .IsUnique();
-
-                entity.Property(x => x.Level)
-                    .HasDefaultValue(1);
-
-                entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
-
-                entity.HasOne(x => x.User)
-                    .WithOne(x => x.Progress)
-                    .HasForeignKey<UserProgress>(x => x.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
-        }
     }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:project/models/app_notification.dart';
 import 'package:project/core/theme/app_theme.dart';
 import 'package:project/models/focus_task.dart';
 import 'package:project/models/user_profile.dart';
 import 'package:project/models/user_setting.dart';
 import 'package:project/services/focus_task_api_service.dart';
+import 'package:project/services/notification_api_service.dart';
 import 'package:project/services/settings_api_service.dart';
 import 'package:project/services/session_store.dart';
 import 'package:project/models/focus_session.dart';
@@ -20,6 +22,7 @@ class MyTimeStore extends ChangeNotifier {
 
   List<FocusTask> _tasks = [];
   List<FocusSession> _focusSessions = [];
+  List<AppNotification> _notifications = [];
   UserSetting _setting = const UserSetting(
     defaultFocusMinutes: 25,
     notificationEnabled: true,
@@ -44,6 +47,11 @@ class MyTimeStore extends ChangeNotifier {
   }
 
   List<FocusSession> get focusSessions => List.unmodifiable(_focusSessions);
+  List<AppNotification> get notifications => List.unmodifiable(_notifications);
+
+  int get unreadNotificationCount {
+    return _notifications.where((item) => !item.isRead).length;
+  }
 
   FocusSession? get latestFocusSession {
     return _focusSessions.isEmpty ? null : _focusSessions.first;
@@ -72,6 +80,56 @@ class MyTimeStore extends ChangeNotifier {
     _tasks = tasks;
     _selectedTask = _firstPlannedTask;
 
+    notifyListeners();
+  }
+
+  Future<void> loadNotificationsFromApi() async {
+    final token = SessionStore.instance.token;
+    if (token == null || token.isEmpty) return;
+
+    final notifications = await NotificationApiService.instance.getNotifications(
+      token,
+    );
+    _notifications = notifications;
+    notifyListeners();
+  }
+
+  Future<void> markNotificationAsRead(int notificationId) async {
+    final token = SessionStore.instance.token;
+    if (token == null || token.isEmpty) return;
+
+    final updated = await NotificationApiService.instance.markAsRead(
+      token: token,
+      notificationId: notificationId,
+    );
+
+    final index = _notifications.indexWhere((item) => item.id == notificationId);
+    if (index >= 0) {
+      _notifications[index] = updated;
+      notifyListeners();
+    }
+  }
+
+  Future<void> markAllNotificationsAsRead() async {
+    final token = SessionStore.instance.token;
+    if (token == null || token.isEmpty) return;
+
+    await NotificationApiService.instance.markAllAsRead(token);
+    _notifications = _notifications
+        .map(
+          (item) => AppNotification(
+            id: item.id,
+            title: item.title,
+            message: item.message,
+            type: item.type,
+            isRead: true,
+            createdAt: item.createdAt,
+            focusTaskId: item.focusTaskId,
+            scheduledAt: item.scheduledAt,
+            sentAt: item.sentAt,
+          ),
+        )
+        .toList();
     notifyListeners();
   }
 
@@ -195,6 +253,21 @@ class MyTimeStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  void upsertTaskFromApi(FocusTask updatedTask) {
+    final existingIndex = _tasks.indexWhere((task) => task.id == updatedTask.id);
+    if (existingIndex >= 0) {
+      _tasks[existingIndex] = updatedTask;
+    } else {
+      _tasks.add(updatedTask);
+    }
+
+    if (_selectedTask?.id == updatedTask.id) {
+      _selectedTask = updatedTask;
+    }
+
+    notifyListeners();
+  }
+
   Future<FocusTask> addTask({
     required String title,
     required String description,
@@ -251,10 +324,9 @@ class MyTimeStore extends ChangeNotifier {
     required TaskRepeat repeat,
     required bool reminderEnabled,
     required String reminderTime,
+    DateTime? occurrenceDate,
   }) async {
-    final oldOutputs = {
-      for (final output in task.outputs) output.title: output.isCompleted,
-    };
+    final existingOutputs = List<FocusOutput>.from(task.outputs);
 
     task.title = title;
     task.description = description;
@@ -265,11 +337,24 @@ class MyTimeStore extends ChangeNotifier {
     task.reminderEnabled = reminderEnabled;
     task.reminderTime = reminderTime;
     task.outputs = outputs
+        .asMap()
+        .entries
         .map(
-          (outputTitle) => FocusOutput(
-            title: outputTitle,
-            isCompleted: oldOutputs[outputTitle] ?? false,
-          ),
+          (entry) {
+            final index = entry.key;
+            final outputTitle = entry.value;
+            final previous = index < existingOutputs.length
+                ? existingOutputs[index]
+                : null;
+
+            return FocusOutput(
+              id: previous?.id,
+              title: outputTitle,
+              isCompleted: previous?.isCompleted ?? false,
+              completedAt: previous?.completedAt,
+              sortOrder: index,
+            );
+          },
         )
         .toList();
     task.status = status;
@@ -277,11 +362,13 @@ class MyTimeStore extends ChangeNotifier {
     if (status == FocusTaskStatus.completed) {
       for (final output in task.outputs) {
         output.isCompleted = true;
+        output.completedAt ??= DateTime.now();
       }
       task.completedAt ??= DateTime.now();
     } else if (task.outputs.every((output) => output.isCompleted)) {
       for (final output in task.outputs) {
         output.isCompleted = false;
+        output.completedAt = null;
       }
       task.completedAt = null;
     }
@@ -291,6 +378,7 @@ class MyTimeStore extends ChangeNotifier {
       final updatedTask = await FocusTaskApiService.instance.updateTask(
         token: token,
         task: task,
+        occurrenceDate: occurrenceDate,
       );
       _syncTaskFromRemote(task, updatedTask);
     }
@@ -302,7 +390,11 @@ class MyTimeStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setTaskCompleted(FocusTask task, bool completed) async {
+  Future<void> setTaskCompleted(
+    FocusTask task,
+    bool completed, {
+    DateTime? occurrenceDate,
+  }) async {
     await updateTask(
       task: task,
       title: task.title,
@@ -315,6 +407,7 @@ class MyTimeStore extends ChangeNotifier {
       repeat: task.repeat,
       reminderEnabled: task.reminderEnabled,
       reminderTime: task.reminderTime,
+      occurrenceDate: occurrenceDate,
     );
   }
 
@@ -347,21 +440,25 @@ class MyTimeStore extends ChangeNotifier {
     }
   }
 
-  FocusSessionResult completeSession({
+  Future<FocusSessionResult> completeSession({
     required FocusTask task,
     required int elapsedSeconds,
     required Set<int> completedIndexes,
     required int distractions,
-  }) {
+    DateTime? occurrenceDate,
+  }) async {
+    final now = DateTime.now();
+
     for (var index = 0; index < task.outputs.length; index++) {
       if (completedIndexes.contains(index)) {
         task.outputs[index].isCompleted = true;
+        task.outputs[index].completedAt ??= now;
       }
     }
 
     if (task.outputs.every((output) => output.isCompleted)) {
       task.status = FocusTaskStatus.completed;
-      task.completedAt = DateTime.now();
+      task.completedAt = now;
     } else {
       task.status = FocusTaskStatus.processing;
       task.completedAt = null;
@@ -385,10 +482,25 @@ class MyTimeStore extends ChangeNotifier {
       completedOutputTitles: completedTitles,
       unfinishedOutputTitles: unfinishedTitles,
       distractions: distractions,
-      finishedAt: DateTime.now(),
+      finishedAt: now,
     );
 
     _sessions.add(result);
+
+    final token = SessionStore.instance.token;
+    if (token != null && token.isNotEmpty) {
+      try {
+        final updatedTask = await FocusTaskApiService.instance.updateTask(
+          token: token,
+          task: task,
+          occurrenceDate: occurrenceDate,
+        );
+        _syncTaskFromRemote(task, updatedTask);
+      } catch (error) {
+        debugPrint('Failed to sync focus task after session: $error');
+      }
+    }
+
     if (task.isCompleted && identical(_selectedTask, task)) {
       _selectedTask = _firstPlannedTask;
     }
@@ -402,7 +514,7 @@ class MyTimeStore extends ChangeNotifier {
     target.description = source.description;
     target.focusMinutes = source.focusMinutes;
     target.priority = source.priority;
-    target.outputs = source.outputs;
+    target.outputs = List<FocusOutput>.from(source.outputs);
     target.scheduledDate = source.scheduledDate;
     target.startTime = source.startTime;
     target.endTime = source.endTime;

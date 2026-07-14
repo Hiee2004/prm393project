@@ -75,8 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
               _HomeGreeting(now: _now, todayTaskCount: todayTasks.length),
               const SizedBox(height: 18),
               _TodayProgressCard(
-                totalFocusTime: _formatMinutes(store.totalFocusSeconds),
-                sessions: store.sessions.length,
+                totalFocusTime: _formatMinutes(store.totalBackendFocusSeconds),
+                sessions: store.focusSessions.length,
                 completedTasks: store.completedTaskCount,
                 totalTasks: todayTasks.length,
               ),
@@ -92,7 +92,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onToggleCompleted: (task) {
                   MyTimeStore.instance.setTaskCompleted(
                     task,
-                    !task.isCompleted,
+                    !task.isCompletedOn(_now),
+                    occurrenceDate: _now,
                   );
                 },
               ),
@@ -125,12 +126,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   FocusTask? _todaySelectedTask(MyTimeStore store, List<FocusTask> todayTasks) {
     final selected = store.selectedTask;
-    if (selected != null && todayTasks.any((task) => task.id == selected.id)) {
-      return selected;
-    }
+      if (selected != null && todayTasks.any((task) => task.id == selected.id)) {
+        return selected;
+      }
 
     for (final task in todayTasks) {
-      if (!task.isCompleted) return task;
+      if (!task.isCompletedOn(_now)) return task;
     }
 
     return null;
@@ -224,7 +225,7 @@ class _DashboardDrawer extends StatelessWidget {
                   icon: Icons.local_fire_department_outlined,
                   label: 'Streak',
                   color: theme.colorScheme.secondary,
-                  onTap: () => _push(context, AppRoutes.habits),
+                  onTap: () => _push(context, AppRoutes.productivityStreak),
                 ),
                 _DrawerTile(
                   icon: Icons.calendar_month_outlined,
@@ -571,6 +572,7 @@ class _UpcomingTasksSection extends StatelessWidget {
                 for (final task in visibleTasks)
                   _UpcomingTaskTile(
                     task: task,
+                    today: today,
                     onTap: () => onOpen(task),
                     onToggleCompleted: () => onToggleCompleted(task),
                   ),
@@ -585,17 +587,20 @@ class _UpcomingTasksSection extends StatelessWidget {
 class _UpcomingTaskTile extends StatelessWidget {
   const _UpcomingTaskTile({
     required this.task,
+    required this.today,
     required this.onTap,
     required this.onToggleCompleted,
   });
 
   final FocusTask task;
+  final DateTime today;
   final VoidCallback onTap;
   final VoidCallback onToggleCompleted;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isCompleted = task.isCompletedOn(today);
 
     return ListTile(
       onTap: onTap,
@@ -613,10 +618,10 @@ class _UpcomingTaskTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w800,
-          decoration: task.isCompleted
+          decoration: isCompleted
               ? TextDecoration.lineThrough
               : TextDecoration.none,
-          color: task.isCompleted
+          color: isCompleted
               ? theme.colorScheme.onSurface.withValues(alpha: 0.52)
               : theme.colorScheme.onSurface,
         ),
@@ -624,7 +629,7 @@ class _UpcomingTaskTile extends StatelessWidget {
       subtitle: Text(
         '${task.focusMinutes} min${task.reminderEnabled ? ' | ${_formatReminderTime(task.reminderTime)}' : ''}',
         style: theme.textTheme.bodyMedium?.copyWith(
-          color: task.isCompleted
+          color: isCompleted
               ? theme.colorScheme.onSurface.withValues(alpha: 0.45)
               : null,
         ),
@@ -642,7 +647,7 @@ class _UpcomingTaskTile extends StatelessWidget {
                 : Colors.transparent,
             shape: BoxShape.circle,
             border: Border.all(
-              color: task.isCompleted
+              color: isCompleted
                   ? theme.colorScheme.primary
                   : theme.colorScheme.primary.withValues(alpha: 0.55),
               width: 1.6,
@@ -651,7 +656,7 @@ class _UpcomingTaskTile extends StatelessWidget {
           child: Icon(
             Icons.check_rounded,
             size: 16,
-            color: task.isCompleted ? Colors.white : Colors.transparent,
+            color: isCompleted ? Colors.white : Colors.transparent,
           ),
         ),
       ),
@@ -691,6 +696,7 @@ class _CurrentFocusCardState extends State<_CurrentFocusCard> {
         ? 0.0
         : task.completedOutputCount / task.outputs.length;
     final canStart = task.canStartToday;
+    final isCompleted = task.isCompletedOn(DateTime.now());
     final outputs = task.outputs.take(3).toList();
 
     return AppCard(
@@ -822,7 +828,7 @@ class _CurrentFocusCardState extends State<_CurrentFocusCard> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: task.isCompleted || !canStart
+              onPressed: isCompleted || !canStart
                   ? null
                   : () {
                       MyTimeStore.instance.startTask(task);
@@ -830,7 +836,7 @@ class _CurrentFocusCardState extends State<_CurrentFocusCard> {
                     },
               icon: const Icon(Icons.play_arrow_rounded),
               label: Text(
-                task.isCompleted
+                isCompleted
                     ? 'Completed'
                     : canStart
                     ? 'Focus on this task'

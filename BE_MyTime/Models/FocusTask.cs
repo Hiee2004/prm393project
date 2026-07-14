@@ -54,6 +54,8 @@ namespace BE_MyTime.Models
 
         public ICollection<FocusSession> Sessions { get; set; } = new List<FocusSession>();
 
+        public ICollection<FocusTaskCompletion> CompletionLogs { get; set; } = new List<FocusTaskCompletion>();
+
         public ICollection<ScheduledTask> ScheduledTasks { get; set; } = new List<ScheduledTask>();
 
         public GoogleCalendarLink? GoogleCalendarLink { get; set; }

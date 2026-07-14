@@ -3,6 +3,7 @@ import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
 import 'package:project/core/theme/app_theme.dart';
 import 'package:project/models/focus_task.dart';
+import 'package:project/screens/smart_task_plan_screen.dart';
 import 'package:project/services/my_time_store.dart';
 import 'package:project/shared/widgets/app_bottom_navigation.dart';
 import 'package:project/shared/widgets/app_card.dart';
@@ -57,6 +58,14 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   void _editTask(FocusTask task) {
     Navigator.pushNamed(context, AppRoutes.addTask, arguments: task);
+  }
+
+  void _openSmartPlan(FocusTask task) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.smartTaskPlan,
+      arguments: SmartTaskPlanArguments(task: task),
+    );
   }
 
   Future<void> _deleteTask(FocusTask task) async {
@@ -216,6 +225,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           onTap: () => _openTask(task),
                           onEdit: () => _editTask(task),
                           onDelete: () => _deleteTask(task),
+                          onOpenSmartPlan: () => _openSmartPlan(task),
                           onOpenTimeline: () => Navigator.pushNamed(
                             context,
                             AppRoutes.aiDashboard,
@@ -539,6 +549,7 @@ class _TaskCard extends StatelessWidget {
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
+    required this.onOpenSmartPlan,
     required this.onOpenTimeline,
   });
 
@@ -546,6 +557,7 @@ class _TaskCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onOpenSmartPlan;
   final VoidCallback onOpenTimeline;
 
   @override
@@ -673,6 +685,43 @@ class _TaskCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Tooltip(
+                      message: 'Create Smart Plan',
+                      child: InkWell(
+                        onTap: onOpenSmartPlan,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF2D9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 14,
+                                color: AppColors.primary,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Smart Plan',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Tooltip(
                       message: 'View in AI Timeline',
                       child: InkWell(
                         onTap: onOpenTimeline,
@@ -751,6 +800,17 @@ class _TaskCard extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(context);
                     onEdit();
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: const Text('Create Smart Plan'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onOpenSmartPlan();
                   },
                 ),
                 ListTile(
