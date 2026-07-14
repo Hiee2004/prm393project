@@ -247,7 +247,24 @@ namespace BE_MyTime
             if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
                 connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
             {
-                return new NpgsqlConnectionStringBuilder(connectionString).ConnectionString;
+                if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
+                {
+                    throw new ArgumentException("Invalid PostgreSQL URL format.");
+                }
+
+                var userInfo = uri.UserInfo.Split(':', 2);
+                var database = uri.AbsolutePath.Trim('/');
+                var builder = new NpgsqlConnectionStringBuilder
+                {
+                    Host = uri.Host,
+                    Port = uri.Port > 0 ? uri.Port : 5432,
+                    Database = string.IsNullOrWhiteSpace(database) ? "postgres" : database,
+                    Username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : string.Empty,
+                    Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
+                    SslMode = SslMode.Prefer
+                };
+
+                return builder.ConnectionString;
             }
 
             return connectionString;
