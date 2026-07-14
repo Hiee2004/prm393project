@@ -11,9 +11,11 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using System.Text;
 using System.Text.Json;
 
@@ -24,6 +26,7 @@ namespace BE_MyTime
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            ConfigureHosting(builder);
 
             // Add services to the container.
             const string FrontendCorsPolicy = "FrontendCorsPolicy";
@@ -35,20 +38,28 @@ namespace BE_MyTime
             {
                 options.AddPolicy(FrontendCorsPolicy, policy =>
                  {
-                   policy.WithOrigins(
-                         "http://localhost:61133",
-                         "http://localhost:3000",
-                         "http://localhost:5000",
-                         "http://localhost:5173"
-                )
-             .AllowAnyHeader()
-             .AllowAnyMethod();
+                     var configuredOrigins = builder.Configuration
+                         .GetSection("Cors:AllowedOrigins")
+                         .Get<string[]>();
+
+                     if (configuredOrigins is { Length: > 0 })
+                     {
+                         policy.WithOrigins(configuredOrigins)
+                             .AllowAnyHeader()
+                             .AllowAnyMethod();
+                         return;
+                     }
+
+                     policy.AllowAnyOrigin()
+                         .AllowAnyHeader()
+                         .AllowAnyMethod();
                 });
             });
             builder.Services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseSqlServer(
-                    builder.Configuration.GetConnectionString("DefaultConnection")
+                var connectionString = ResolveConnectionString(builder.Configuration);
+                options.UseNpgsql(
+                    connectionString
                 );
             });
 
@@ -155,9 +166,10 @@ namespace BE_MyTime
             });
             builder.Services.AddAuthorization();
             var app = builder.Build();
+            InitializeDatabase(app);
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
@@ -186,7 +198,7 @@ namespace BE_MyTime
                 });
             });
 
-            if (!app.Environment.IsDevelopment())
+            if (builder.Configuration.GetValue<bool>("HttpsRedirection:Enabled"))
             {
                 app.UseHttpsRedirection();
             }
@@ -198,6 +210,52 @@ namespace BE_MyTime
             app.MapControllers();
 
             app.Run();
+        }
+
+        private static void ConfigureHosting(WebApplicationBuilder builder)
+        {
+            var port = builder.Configuration["PORT"] ?? Environment.GetEnvironmentVariable("PORT");
+            if (!string.IsNullOrWhiteSpace(port))
+            {
+                builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+            }
+        }
+
+        private static string ResolveConnectionString(IConfiguration configuration)
+        {
+            var configuredConnection = configuration.GetConnectionString("DefaultConnection");
+            if (!string.IsNullOrWhiteSpace(configuredConnection))
+            {
+                return NormalizePostgresConnectionString(configuredConnection);
+            }
+
+            var databaseUrl = configuration["DATABASE_URL"];
+            if (!string.IsNullOrWhiteSpace(databaseUrl))
+            {
+                return NormalizePostgresConnectionString(databaseUrl);
+            }
+
+            throw new InvalidOperationException(
+                "No database connection string was configured. Set ConnectionStrings:DefaultConnection or DATABASE_URL."
+            );
+        }
+
+        private static string NormalizePostgresConnectionString(string connectionString)
+        {
+            if (connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+                connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+            {
+                return new NpgsqlConnectionStringBuilder(connectionString).ConnectionString;
+            }
+
+            return connectionString;
+        }
+
+        private static void InitializeDatabase(WebApplication app)
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            dbContext.Database.Migrate();
         }
     }
 }

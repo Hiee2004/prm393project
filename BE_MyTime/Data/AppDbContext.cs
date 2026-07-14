@@ -89,7 +89,7 @@ namespace BE_MyTime.Data
                     .HasMaxLength(2000);
 
                 entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
             });
         }
 
@@ -175,7 +175,7 @@ namespace BE_MyTime.Data
                 entity.HasIndex(x => new { x.UserId, x.Deadline });
 
                 entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasIndex(x => new { x.UserId, x.ScheduledDate });
 
@@ -207,7 +207,7 @@ namespace BE_MyTime.Data
                     .HasDefaultValue(0);
 
                 entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasIndex(x => x.FocusTaskId);
 
@@ -236,7 +236,7 @@ namespace BE_MyTime.Data
                     .HasMaxLength(1000);
 
                 entity.Property(x => x.StartedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasIndex(x => new { x.UserId, x.StartedAt });
 
@@ -270,7 +270,7 @@ namespace BE_MyTime.Data
                     .HasMaxLength(500);
 
                 entity.Property(x => x.OccurredAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasIndex(x => x.FocusSessionId);
 
@@ -317,7 +317,7 @@ namespace BE_MyTime.Data
                     .HasMaxLength(2000);
 
                 entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasOne(x => x.FocusSession)
                     .WithOne(x => x.AiFocusEvaluation)
@@ -350,7 +350,7 @@ namespace BE_MyTime.Data
                     .HasDefaultValue(false);
 
                 entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasIndex(x => new { x.UserId, x.IsRead });
 
@@ -401,7 +401,7 @@ namespace BE_MyTime.Data
                     .HasMaxLength(30);
 
                 entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasIndex(x => new { x.UserId, x.Status });
 
@@ -432,7 +432,7 @@ namespace BE_MyTime.Data
                     .HasMaxLength(300);
 
                 entity.Property(x => x.SyncedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasOne(x => x.FocusTask)
                     .WithOne(x => x.GoogleCalendarLink)
@@ -453,7 +453,7 @@ namespace BE_MyTime.Data
                     .HasColumnType("date");
 
                 entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasIndex(x => new { x.FocusTaskId, x.CompletedOn })
                     .IsUnique();
@@ -484,7 +484,7 @@ namespace BE_MyTime.Data
                     .HasDefaultValue(true);
 
                 entity.Property(x => x.CreatedAt)
-                    .HasDefaultValueSql("GETUTCDATE()");
+                    .HasDefaultValueSql("NOW()");
 
                 entity.HasIndex(x => new { x.UserId, x.StartTime });
 
