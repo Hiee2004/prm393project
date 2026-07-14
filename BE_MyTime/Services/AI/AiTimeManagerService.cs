@@ -34,12 +34,12 @@ namespace BE_MyTime.Services.AI
             {
                 return new AiPlanResponse
                 {
-                    GeneratedAt = DateTime.Now,
+                    GeneratedAt = DateTime.UtcNow,
                     DailySuggestion = "No active tasks found. Add a task and AI will build a plan for you."
                 };
             }
 
-            var today = DateTime.Today;
+            var today = DateTime.UtcNow.Date;
             var currentStart = new TimeSpan(8, 0, 0);
             var draftEntities = new List<AiPlanDraft>();
             var draftResponses = new List<AiPlanDraftResponse>();
@@ -147,7 +147,7 @@ namespace BE_MyTime.Services.AI
 
             return new AiPlanResponse
             {
-                GeneratedAt = DateTime.Now,
+                GeneratedAt = DateTime.UtcNow,
                 DailySuggestion = suggestion,
                 SortedTasks = activeTasks.Select(MapTaskScore).ToList(),
                 Drafts = draftResponses,
@@ -169,7 +169,7 @@ namespace BE_MyTime.Services.AI
                 .ToList();
 
             var sessions = new List<AiPomodoroSessionResponse>();
-            var now = DateTime.Today;
+            var now = DateTime.UtcNow.Date;
             var cursor = new TimeSpan(8, 0, 0);
 
             foreach (var item in activeTasks)
@@ -250,7 +250,7 @@ namespace BE_MyTime.Services.AI
             {
                 return new SmartScheduleResponse
                 {
-                    GeneratedAt = DateTime.Now,
+                    GeneratedAt = DateTime.UtcNow,
                     DailySuggestion = "No active tasks found. Add a task to generate a smart schedule."
                 };
             }
@@ -261,7 +261,7 @@ namespace BE_MyTime.Services.AI
 
             var preferredStart = setting?.PreferredFocusStartTime ?? new TimeSpan(8, 0, 0);
             var preferredEnd = setting?.PreferredFocusEndTime ?? new TimeSpan(20, 0, 0);
-            var planningDate = DateTime.Today;
+            var planningDate = DateTime.UtcNow.Date;
 
             var existing = await _dbContext.ScheduledTasks
                 .Where(item => item.UserId == userId && item.StartTime.Date == planningDate)
@@ -335,7 +335,7 @@ namespace BE_MyTime.Services.AI
 
             return new SmartScheduleResponse
             {
-                GeneratedAt = DateTime.Now,
+                GeneratedAt = DateTime.UtcNow,
                 DailySuggestion = BuildMultiTaskSuggestion(activeTasks),
                 SuggestedTaskOrder = activeTasks.Select(MapTaskScore).ToList(),
                 ScheduledTasks = timelineResponses
@@ -344,7 +344,7 @@ namespace BE_MyTime.Services.AI
 
         public async Task<SmartScheduleResponse> GetTodaySmartScheduleAsync(int userId)
         {
-            var planningDate = DateTime.Today;
+            var planningDate = DateTime.UtcNow.Date;
             var scoredTasks = await GetScoredTasksAsync(userId);
             var activeTasks = scoredTasks
                 .Where(item => !item.Task.IsCompleted())
@@ -360,7 +360,7 @@ namespace BE_MyTime.Services.AI
             {
                 GeneratedAt = persisted.FirstOrDefault()?.UpdatedAt
                     ?? persisted.FirstOrDefault()?.CreatedAt
-                    ?? DateTime.Now,
+                    ?? DateTime.UtcNow,
                 DailySuggestion = BuildMultiTaskSuggestion(activeTasks),
                 SuggestedTaskOrder = activeTasks.Select(MapTaskScore).ToList(),
                 ScheduledTasks = persisted
@@ -401,7 +401,7 @@ namespace BE_MyTime.Services.AI
                 OriginalInput = $"smart_task_plan:{taskId}:{normalizedMode}",
                 SuggestedTitle = task.Title,
                 SuggestedDescription = task.Description,
-                SuggestedDate = task.ScheduledDate?.Date ?? DateTime.Today,
+                SuggestedDate = task.ScheduledDate?.Date ?? DateTime.UtcNow.Date,
                 SuggestedStartTime = DefaultStartFor(bestTimeOfDay),
                 SuggestedEndTime = DefaultStartFor(bestTimeOfDay)
                     .Add(TimeSpan.FromMinutes(suggestedMinutes)),
@@ -484,6 +484,8 @@ namespace BE_MyTime.Services.AI
             int userId,
             UpdateScheduledTaskRequest request)
         {
+            var normalizedRequestStart = NormalizeUtc(request.StartTime) ?? request.StartTime;
+            var normalizedRequestEnd = NormalizeUtc(request.EndTime) ?? request.EndTime;
             var scheduledTask = await _dbContext.ScheduledTasks
                 .Include(item => item.FocusTask)
                 .FirstOrDefaultAsync(item =>
@@ -494,13 +496,13 @@ namespace BE_MyTime.Services.AI
                 return null;
             }
 
-            var duration = request.EndTime - request.StartTime;
+            var duration = normalizedRequestEnd - normalizedRequestStart;
             if (duration.TotalMinutes <= 0)
             {
                 duration = scheduledTask.EndTime - scheduledTask.StartTime;
             }
 
-            var updatedStart = request.StartTime;
+            var updatedStart = normalizedRequestStart;
             var updatedEnd = updatedStart.Add(duration);
 
             var siblings = await _dbContext.ScheduledTasks
@@ -526,7 +528,7 @@ namespace BE_MyTime.Services.AI
 
             if (scheduledTask.SessionNumber == 1)
             {
-                scheduledTask.FocusTask.ScheduledDate = updatedStart.Date;
+                scheduledTask.FocusTask.ScheduledDate = NormalizeUtc(updatedStart.Date);
                 scheduledTask.FocusTask.StartTime = updatedStart.TimeOfDay;
                 scheduledTask.FocusTask.EndTime = updatedEnd.TimeOfDay;
                 scheduledTask.FocusTask.UpdatedAt = DateTime.UtcNow;
@@ -560,7 +562,7 @@ namespace BE_MyTime.Services.AI
 
         private async Task<List<ScoredTask>> GetScoredTasksAsync(int userId)
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var tasks = await _taskRepository.GetByUserIdAsync(userId);
 
             return tasks
@@ -797,6 +799,21 @@ namespace BE_MyTime.Services.AI
             };
         }
 
+        private static DateTime? NormalizeUtc(DateTime? value)
+        {
+            if (!value.HasValue)
+            {
+                return null;
+            }
+
+            return value.Value.Kind switch
+            {
+                DateTimeKind.Utc => value.Value,
+                DateTimeKind.Local => value.Value.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
+            };
+        }
+
         private static string NormalizePlanMode(string? mode)
         {
             var normalized = mode?.Trim().ToLowerInvariant();
@@ -811,7 +828,7 @@ namespace BE_MyTime.Services.AI
         private static int SuggestDifficulty(FocusTask task)
         {
             var difficulty = Math.Clamp(task.Difficulty, 1, 5);
-            if ((task.Deadline ?? task.ScheduledDate)?.Date <= DateTime.Today.AddDays(1))
+            if ((task.Deadline ?? task.ScheduledDate)?.Date <= DateTime.UtcNow.Date.AddDays(1))
             {
                 difficulty = Math.Min(5, difficulty + 1);
             }
@@ -828,7 +845,7 @@ namespace BE_MyTime.Services.AI
         {
             var baseMinutes = Math.Max(25, task.FocusMinutes);
             var difficultyFactor = Math.Clamp(task.Difficulty, 1, 5) * 5;
-            var deadlineBoost = ((task.Deadline ?? task.ScheduledDate)?.Date ?? DateTime.Today) <= DateTime.Today.AddDays(1)
+            var deadlineBoost = ((task.Deadline ?? task.ScheduledDate)?.Date ?? DateTime.UtcNow.Date) <= DateTime.UtcNow.Date.AddDays(1)
                 ? 10
                 : 0;
 
@@ -846,7 +863,7 @@ namespace BE_MyTime.Services.AI
         private static string SuggestBestTimeOfDay(FocusTask task, UserSetting? setting)
         {
             var difficulty = Math.Clamp(task.Difficulty, 1, 5);
-            var hasNearDeadline = ((task.Deadline ?? task.ScheduledDate)?.Date ?? DateTime.Today) <= DateTime.Today.AddDays(1);
+            var hasNearDeadline = ((task.Deadline ?? task.ScheduledDate)?.Date ?? DateTime.UtcNow.Date) <= DateTime.UtcNow.Date.AddDays(1);
             var preferredStart = setting?.PreferredFocusStartTime ?? new TimeSpan(8, 0, 0);
 
             if (difficulty >= 4 || hasNearDeadline)
@@ -990,7 +1007,7 @@ namespace BE_MyTime.Services.AI
             string mode)
         {
             var deadline = task.Deadline ?? task.ScheduledDate;
-            var urgencyText = deadline.HasValue && deadline.Value.Date <= DateTime.Today.AddDays(1)
+            var urgencyText = deadline.HasValue && deadline.Value.Date <= DateTime.UtcNow.Date.AddDays(1)
                 ? "The deadline is near, so keep momentum and avoid context switching."
                 : "You can keep a steady pace and protect one clean focus block.";
 
@@ -1091,7 +1108,7 @@ namespace BE_MyTime.Services.AI
                 return task.Status == FocusTaskStatus.Completed;
             }
 
-            var today = DateTime.Today;
+            var today = DateTime.UtcNow.Date;
             return task.CompletionLogs.Any(item => item.CompletedOn.Date == today);
         }
     }

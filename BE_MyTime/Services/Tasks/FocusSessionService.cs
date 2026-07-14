@@ -33,6 +33,9 @@ namespace BE_MyTime.Services.Tasks
             int userId,
             CreateFocusSessionRequest request)
         {
+            var normalizedStartedAt = NormalizeUtc(request.StartedAt) ?? DateTime.UtcNow;
+            var normalizedCompletedAt = NormalizeUtc(request.CompletedAt);
+
             var session = new FocusSession
             {
                 UserId = userId,
@@ -43,8 +46,8 @@ namespace BE_MyTime.Services.Tasks
                 TotalOutputs = request.TotalOutputs,
                 DistractionCount = request.DistractionCount,
                 TotalDistractionSeconds = request.TotalDistractionSeconds,
-                StartedAt = request.StartedAt,
-                CompletedAt = request.CompletedAt,
+                StartedAt = normalizedStartedAt,
+                CompletedAt = normalizedCompletedAt,
                 FocusScore = CalculateFocusScore(request),
                 FeedbackTitle = "Focus Completed",
                 FeedbackMessage = "Good job! Keep your momentum.",
@@ -82,6 +85,21 @@ namespace BE_MyTime.Services.Tasks
             var score = ratio * 100;
             score -= request.DistractionCount * 5;
             return Math.Max(score, 0);
+        }
+
+        private static DateTime? NormalizeUtc(DateTime? value)
+        {
+            if (!value.HasValue)
+            {
+                return null;
+            }
+
+            return value.Value.Kind switch
+            {
+                DateTimeKind.Utc => value.Value,
+                DateTimeKind.Local => value.Value.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
+            };
         }
 
         private async Task CreateFocusCompletedNotificationAsync(FocusSession session, int userId)

@@ -31,6 +31,8 @@ namespace BE_MyTime.Services.Tasks
             CreateFocusTaskRequest request)
         {
             ValidateCreateRequest(request.Title, request.Outputs);
+            var normalizedScheduledDate = NormalizeUtc(request.ScheduledDate);
+            var normalizedDeadline = NormalizeUtc(request.Deadline) ?? normalizedScheduledDate;
 
             var task = new FocusTask
             {
@@ -39,10 +41,10 @@ namespace BE_MyTime.Services.Tasks
                 Description = request.Description,
                 FocusMinutes = request.FocusMinutes,
                 Priority = ParseEnum(request.Priority, TaskPriority.Medium),
-                Deadline = request.Deadline ?? request.ScheduledDate,
+                Deadline = normalizedDeadline,
                 Difficulty = Math.Clamp(request.Difficulty, 1, 5),
                 Status = FocusTaskStatus.Todo,
-                ScheduledDate = request.ScheduledDate,
+                ScheduledDate = normalizedScheduledDate,
                 StartTime = request.StartTime,
                 EndTime = request.EndTime,
                 Repeat = ParseEnum(request.Repeat, TaskRepeat.None),
@@ -72,6 +74,8 @@ namespace BE_MyTime.Services.Tasks
 
             var task = await _repository.GetByIdAsync(id, userId);
             if (task == null) return null;
+            var normalizedScheduledDate = NormalizeUtc(request.ScheduledDate);
+            var normalizedDeadline = NormalizeUtc(request.Deadline) ?? normalizedScheduledDate;
 
             var previousStatus = task.Status;
 
@@ -79,10 +83,10 @@ namespace BE_MyTime.Services.Tasks
             task.Description = request.Description;
             task.FocusMinutes = request.FocusMinutes;
             task.Priority = ParseEnum(request.Priority, TaskPriority.Medium);
-            task.Deadline = request.Deadline ?? request.ScheduledDate;
+            task.Deadline = normalizedDeadline;
             task.Difficulty = Math.Clamp(request.Difficulty, 1, 5);
             task.Status = ParseEnum(request.Status, FocusTaskStatus.Todo);
-            task.ScheduledDate = request.ScheduledDate;
+            task.ScheduledDate = normalizedScheduledDate;
             task.StartTime = request.StartTime;
             task.EndTime = request.EndTime;
             task.Repeat = ParseEnum(request.Repeat, TaskRepeat.None);
@@ -157,7 +161,7 @@ namespace BE_MyTime.Services.Tasks
                 var requestedOutput = item.output;
                 var normalizedTitle = requestedOutput.Title.Trim();
                 DateTime? completedAt = requestedOutput.IsCompleted
-                    ? requestedOutput.CompletedAt ?? DateTime.UtcNow
+                    ? NormalizeUtc(requestedOutput.CompletedAt) ?? DateTime.UtcNow
                     : null;
 
                 if (requestedOutput.Id.HasValue &&
@@ -203,6 +207,21 @@ namespace BE_MyTime.Services.Tasks
             return Enum.TryParse<TEnum>(value, true, out var result)
                 ? result
                 : fallback;
+        }
+
+        private static DateTime? NormalizeUtc(DateTime? value)
+        {
+            if (!value.HasValue)
+            {
+                return null;
+            }
+
+            return value.Value.Kind switch
+            {
+                DateTimeKind.Utc => value.Value,
+                DateTimeKind.Local => value.Value.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)
+            };
         }
 
         private static void ValidateCreateRequest(string? title, List<string>? outputs)
