@@ -223,20 +223,22 @@ namespace BE_MyTime
 
         private static string ResolveConnectionString(IConfiguration configuration)
         {
-            var configuredConnection = configuration.GetConnectionString("DefaultConnection");
-            if (!string.IsNullOrWhiteSpace(configuredConnection))
-            {
-                return NormalizePostgresConnectionString(configuredConnection);
-            }
-
             var databaseUrl = configuration["DATABASE_URL"];
+
             if (!string.IsNullOrWhiteSpace(databaseUrl))
             {
                 return NormalizePostgresConnectionString(databaseUrl);
             }
 
+            var configuredConnection = configuration.GetConnectionString("DefaultConnection");
+
+            if (!string.IsNullOrWhiteSpace(configuredConnection))
+            {
+                return NormalizePostgresConnectionString(configuredConnection);
+            }
+
             throw new InvalidOperationException(
-                "No database connection string was configured. Set ConnectionStrings:DefaultConnection or DATABASE_URL."
+                "No database connection string was configured."
             );
         }
 
