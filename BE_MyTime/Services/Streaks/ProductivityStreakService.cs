@@ -45,11 +45,11 @@ namespace BE_MyTime.Services.Streaks
                 .ToListAsync();
 
             var taskCountByDay = completedTasks
-                .GroupBy(x => x.CompletedDate.ToLocalTime().Date)
+                .GroupBy(x => x.CompletedDate.Date)
                 .ToDictionary(group => group.Key, group => group.Count());
 
             var focusSecondsByDay = focusSessions
-                .GroupBy(x => x.SessionDate.ToLocalTime().Date)
+                .GroupBy(x => x.SessionDate.Date)
                 .ToDictionary(group => group.Key, group => group.Sum(x => x.ActualFocusSeconds));
 
             var calendar = new List<ProductivityStreakDayResponse>(safeDays);
