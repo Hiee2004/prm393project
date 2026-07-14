@@ -3,15 +3,18 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   ApiConfig._();
 
+  static const String _defaultBaseUrl =
+      'https://prm393project-production.up.railway.app';
+
+  static const String _configuredBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+  );
+
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'https://localhost:7063';
+    if (_configuredBaseUrl.isNotEmpty) {
+      return _configuredBaseUrl;
     }
 
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5007';
-    }
-
-    return 'https://localhost:7063';
+    return _defaultBaseUrl;
   }
 }

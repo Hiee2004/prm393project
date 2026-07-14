@@ -49,9 +49,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
 
     try {
-      final dashboard = await ProductivityStreakApiService.instance.getDashboard(
-        token,
-      );
+      final dashboard = await ProductivityStreakApiService.instance
+          .getDashboard(token);
       if (!mounted) return;
       setState(() {
         _dashboard = dashboard;
@@ -324,95 +323,147 @@ class _MonthCalendarCard extends StatelessWidget {
     final totalCells = ((firstOffset + daysInMonth + 6) ~/ 7) * 7;
     final today = DateTime.now();
     final streakMap = {
-      for (final day in dashboard?.calendar ?? const <ProductivityStreakDayModel>[])
+      for (final day
+          in dashboard?.calendar ?? const <ProductivityStreakDayModel>[])
         DateTime(day.date.year, day.date.month, day.date.day): day,
     };
 
     return AppCard(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Previous month',
-                onPressed: onPreviousMonth,
-                icon: const Icon(Icons.chevron_left_rounded),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      '${_monthName(selectedDate.month)} ${selectedDate.year}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Selected ${_formatShortDateWithYear(selectedDate)}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'Next month',
-                onPressed: onNextMonth,
-                icon: const Icon(Icons.chevron_right_rounded),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: const [
-              _WeekdayLabel('S'),
-              _WeekdayLabel('M'),
-              _WeekdayLabel('T'),
-              _WeekdayLabel('W'),
-              _WeekdayLabel('T'),
-              _WeekdayLabel('F'),
-              _WeekdayLabel('S'),
-            ],
-          ),
-          const SizedBox(height: 8),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: totalCells,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              mainAxisExtent: 40,
-            ),
-            itemBuilder: (context, index) {
-              final date = monthStart.add(Duration(days: index - firstOffset));
-              final inMonth = date.month == selectedDate.month;
-              final isSelected = DateUtils.isSameDay(date, selectedDate);
-              final isToday = DateUtils.isSameDay(date, today);
-              final taskCount = MyTimeStore.instance.tasksForDate(date).length;
-              final streakDay = streakMap[DateTime(date.year, date.month, date.day)];
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 340;
 
-              return _CalendarDayCell(
-                date: date,
-                inMonth: inMonth,
-                isSelected: isSelected,
-                isToday: isToday,
-                taskCount: taskCount,
-                streakDay: streakDay,
-                onTap: () => onSelectDate(date),
-              );
-            },
-          ),
-        ],
+          return Column(
+            children: [
+              if (isCompact) ...[
+                _MonthSwitcherButton(
+                  tooltip: 'Previous month',
+                  onPressed: onPreviousMonth,
+                  icon: Icons.chevron_left_rounded,
+                ),
+                const SizedBox(height: 8),
+              ],
+              Row(
+                children: [
+                  if (!isCompact)
+                    _MonthSwitcherButton(
+                      tooltip: 'Previous month',
+                      onPressed: onPreviousMonth,
+                      icon: Icons.chevron_left_rounded,
+                    ),
+                  if (!isCompact) const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text(
+                          '${_monthName(selectedDate.month)} ${selectedDate.year}',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Selected ${_formatShortDateWithYear(selectedDate)}',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isCompact) const SizedBox(width: 4),
+                  _MonthSwitcherButton(
+                    tooltip: 'Next month',
+                    onPressed: onNextMonth,
+                    icon: Icons.chevron_right_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: const [
+                  _WeekdayLabel('S'),
+                  _WeekdayLabel('M'),
+                  _WeekdayLabel('T'),
+                  _WeekdayLabel('W'),
+                  _WeekdayLabel('T'),
+                  _WeekdayLabel('F'),
+                  _WeekdayLabel('S'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: totalCells,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 6,
+                  mainAxisExtent: 40,
+                ),
+                itemBuilder: (context, index) {
+                  final date = monthStart.add(
+                    Duration(days: index - firstOffset),
+                  );
+                  final inMonth = date.month == selectedDate.month;
+                  final isSelected = DateUtils.isSameDay(date, selectedDate);
+                  final isToday = DateUtils.isSameDay(date, today);
+                  final taskCount = MyTimeStore.instance
+                      .tasksForDate(date)
+                      .length;
+                  final streakDay =
+                      streakMap[DateTime(date.year, date.month, date.day)];
+
+                  return _CalendarDayCell(
+                    date: date,
+                    inMonth: inMonth,
+                    isSelected: isSelected,
+                    isToday: isToday,
+                    taskCount: taskCount,
+                    streakDay: streakDay,
+                    onTap: () => onSelectDate(date),
+                  );
+                },
+              ),
+            ],
+          );
+        },
       ),
+    );
+  }
+}
+
+class _MonthSwitcherButton extends StatelessWidget {
+  const _MonthSwitcherButton({
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      padding: EdgeInsets.zero,
+      icon: Icon(icon, size: 22),
     );
   }
 }
@@ -487,9 +538,7 @@ class _CalendarDayCell extends StatelessWidget {
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: borderColor,
-          ),
+          border: Border.all(color: borderColor),
           boxShadow: isSelected
               ? [
                   BoxShadow(
@@ -567,10 +616,7 @@ class _CalendarDayCell extends StatelessWidget {
 }
 
 class _ProductivitySummaryCard extends StatelessWidget {
-  const _ProductivitySummaryCard({
-    required this.dashboard,
-    required this.day,
-  });
+  const _ProductivitySummaryCard({required this.dashboard, required this.day});
 
   final ProductivityStreakDashboardModel dashboard;
   final ProductivityStreakDayModel day;
@@ -611,10 +657,14 @@ class _ProductivitySummaryCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _SummaryPill(label: '${day.completedTaskCount} completed task(s)'),
+              _SummaryPill(
+                label: '${day.completedTaskCount} completed task(s)',
+              ),
               _SummaryPill(label: '$focusMinutes focus minute(s)'),
               _SummaryPill(
-                label: day.isProductive ? 'Streak counted' : 'Streak not counted',
+                label: day.isProductive
+                    ? 'Streak counted'
+                    : 'Streak not counted',
               ),
             ],
           ),
@@ -637,10 +687,7 @@ class _SummaryPill extends StatelessWidget {
         color: AppColors.surfaceSoft,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(fontWeight: FontWeight.w800),
-      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
     );
   }
 }
