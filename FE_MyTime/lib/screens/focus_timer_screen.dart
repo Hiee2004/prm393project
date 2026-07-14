@@ -354,11 +354,12 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
       }
     }
 
-    MyTimeStore.instance.completeSession(
+    await MyTimeStore.instance.completeSession(
       task: task,
       elapsedSeconds: elapsedSeconds,
       completedIndexes: _completedIndexes,
       distractions: _distractions,
+      occurrenceDate: DateTime.now(),
     );
 
     if (!mounted) return;

@@ -61,10 +61,4 @@
         Confirmed = 2,
         Cancelled = 3
     }
-
-    public enum HabitFrequencyType
-    {
-        Daily = 1,
-        Weekly = 2
-    }
 }

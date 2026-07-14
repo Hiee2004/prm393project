@@ -117,10 +117,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () {
-                  Navigator.pushNamed(context, AppRoutes.habits);
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.productivityStreak,
+                  );
                 },
                 icon: const Icon(Icons.local_fire_department_outlined),
-                label: const Text('Open Habit Tracker'),
+                label: const Text('Open Productivity Streak'),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(

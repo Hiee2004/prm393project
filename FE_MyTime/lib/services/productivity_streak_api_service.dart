@@ -2,13 +2,14 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:project/core/config/api_config.dart';
-import 'package:project/models/habit_tracker.dart';
+import 'package:project/models/productivity_streak.dart';
 import 'package:project/services/api_error.dart';
 
-class HabitApiService {
-  HabitApiService._();
+class ProductivityStreakApiService {
+  ProductivityStreakApiService._();
 
-  static final HabitApiService instance = HabitApiService._();
+  static final ProductivityStreakApiService instance =
+      ProductivityStreakApiService._();
 
   Future<ProductivityStreakDashboardModel> getDashboard(
     String token, {

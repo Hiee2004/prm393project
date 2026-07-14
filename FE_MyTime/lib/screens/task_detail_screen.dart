@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
 import 'package:project/models/focus_task.dart';
+import 'package:project/screens/smart_task_plan_screen.dart';
 import 'package:project/services/my_time_store.dart';
 import 'package:project/shared/widgets/app_card.dart';
 import 'package:project/shared/widgets/section_header.dart';
@@ -207,6 +208,17 @@ class TaskDetailScreen extends StatelessWidget {
                 },
                 icon: const Icon(Icons.edit),
                 label: const Text('Edit task'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.smartTaskPlan,
+                    arguments: SmartTaskPlanArguments(task: task),
+                  );
+                },
+                icon: const Icon(Icons.auto_awesome_rounded),
+                label: const Text('Smart Plan'),
               ),
               OutlinedButton.icon(
                 onPressed: () =>

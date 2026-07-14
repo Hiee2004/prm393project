@@ -2,22 +2,23 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:project/core/constants/app_colors.dart';
-import 'package:project/models/habit_tracker.dart';
-import 'package:project/services/habit_api_service.dart';
+import 'package:project/models/productivity_streak.dart';
+import 'package:project/services/productivity_streak_api_service.dart';
 import 'package:project/services/session_store.dart';
 import 'package:project/shared/widgets/app_background.dart';
 import 'package:project/shared/widgets/app_bottom_navigation.dart';
 import 'package:project/shared/widgets/app_card.dart';
 import 'package:project/shared/widgets/section_header.dart';
 
-class HabitsScreen extends StatefulWidget {
-  const HabitsScreen({super.key});
+class ProductivityStreakScreen extends StatefulWidget {
+  const ProductivityStreakScreen({super.key});
 
   @override
-  State<HabitsScreen> createState() => _HabitsScreenState();
+  State<ProductivityStreakScreen> createState() =>
+      _ProductivityStreakScreenState();
 }
 
-class _HabitsScreenState extends State<HabitsScreen> {
+class _ProductivityStreakScreenState extends State<ProductivityStreakScreen> {
   ProductivityStreakDashboardModel? _dashboard;
   bool _isLoading = true;
   String? _error;
@@ -46,7 +47,9 @@ class _HabitsScreenState extends State<HabitsScreen> {
     });
 
     try {
-      final dashboard = await HabitApiService.instance.getDashboard(token);
+      final dashboard = await ProductivityStreakApiService.instance.getDashboard(
+        token,
+      );
       if (!mounted) return;
 
       setState(() {
@@ -438,14 +441,14 @@ class _WeekHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textMuted,
-            fontWeight: FontWeight.w800,
-          ),
+    return SizedBox(
+      width: 42,
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: AppColors.textMuted,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -457,7 +460,7 @@ class _CalendarEmptyCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(width: 48, height: 58);
+    return const SizedBox(width: 42, height: 42);
   }
 }
 
@@ -475,58 +478,58 @@ class _CalendarDayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isProductive = streakDay?.isProductive ?? false;
-    final markerColor = isToday
-        ? AppColors.warning
-        : (isProductive ? const Color(0xFF5BC6FF) : Colors.transparent);
-    final textColor = isToday
-        ? Colors.white
-        : (isProductive ? Colors.white : AppColors.textMuted);
+    final completedTaskCount = streakDay?.completedTaskCount ?? 0;
+    final backgroundColor = isProductive
+        ? const Color(0xFFFFE6A7)
+        : completedTaskCount > 0
+        ? const Color(0xFFFFF5DB)
+        : Colors.transparent;
 
     return SizedBox(
-      width: 48,
-      height: 58,
-      child: Center(
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (isProductive)
-              Positioned(
-                top: 4,
-                child: Icon(
-                  Icons.location_on_rounded,
-                  size: 40,
-                  color: markerColor,
-                ),
-              )
-            else if (isToday)
-              Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.warning,
-                ),
+      width: 42,
+      height: 42,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (backgroundColor != Colors.transparent)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                shape: BoxShape.circle,
               ),
+            ),
+          Text(
+            '$dayNumber',
+            style: TextStyle(
+              color: isProductive ? AppColors.primary : AppColors.textPrimary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (isToday)
             Positioned(
-              top: isProductive ? 13 : 14,
-              child: Text(
-                '$dayNumber',
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
+              bottom: 2,
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
                 ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
 class _StreakErrorState extends StatelessWidget {
-  const _StreakErrorState({required this.message, required this.onRetry});
+  const _StreakErrorState({
+    required this.message,
+    required this.onRetry,
+  });
 
   final String message;
   final Future<void> Function() onRetry;
@@ -540,15 +543,23 @@ class _StreakErrorState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 52),
+              const Icon(
+                Icons.error_outline_rounded,
+                color: AppColors.primary,
+                size: 36,
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Could not load productivity streak',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                style: TextStyle(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 6),
-              Text(message, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 14),
               ElevatedButton(
                 onPressed: onRetry,
                 child: const Text('Try again'),
@@ -561,21 +572,21 @@ class _StreakErrorState extends StatelessWidget {
   }
 }
 
-String _monthLabel(DateTime value) {
+String _monthLabel(DateTime month) {
   const months = [
-    'JANUARY',
-    'FEBRUARY',
-    'MARCH',
-    'APRIL',
-    'MAY',
-    'JUNE',
-    'JULY',
-    'AUGUST',
-    'SEPTEMBER',
-    'OCTOBER',
-    'NOVEMBER',
-    'DECEMBER',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
-  return '${months[value.month - 1]} ${value.year}';
+  return '${months[month.month - 1]} ${month.year}';
 }

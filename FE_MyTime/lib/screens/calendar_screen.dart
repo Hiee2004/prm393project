@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
 import 'package:project/models/focus_task.dart';
+import 'package:project/models/productivity_streak.dart';
 import 'package:project/screens/add_focus_task_screen.dart';
+import 'package:project/services/productivity_streak_api_service.dart';
 import 'package:project/services/my_time_store.dart';
+import 'package:project/services/session_store.dart';
 import 'package:project/shared/widgets/app_card.dart';
 
 enum CalendarViewType { day, week, month }
@@ -18,14 +23,63 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   CalendarViewType _view = CalendarViewType.day;
   DateTime _selectedDate = DateTime.now();
+  ProductivityStreakDashboardModel? _dashboard;
+  bool _isLoadingStreak = true;
+  String? _streakError;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadProductivityDashboard());
+  }
+
+  Future<void> _loadProductivityDashboard() async {
+    final token = SessionStore.instance.token;
+    if (token == null || token.isEmpty) {
+      setState(() {
+        _streakError = 'Please log in again to load productivity calendar.';
+        _isLoadingStreak = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingStreak = true;
+      _streakError = null;
+    });
+
+    try {
+      final dashboard = await ProductivityStreakApiService.instance.getDashboard(
+        token,
+      );
+      if (!mounted) return;
+      setState(() {
+        _dashboard = dashboard;
+        _isLoadingStreak = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _streakError = error.toString();
+        _isLoadingStreak = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final store = MyTimeStore.instance;
+    final selectedStreakDay = _selectedStreakDay;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendar'),
         actions: [
+          IconButton(
+            tooltip: 'Refresh streak',
+            onPressed: _isLoadingStreak ? null : _loadProductivityDashboard,
+            icon: const Icon(Icons.local_fire_department_rounded),
+          ),
           IconButton(
             tooltip: 'Create task',
             onPressed: _openCreateTask,
@@ -41,6 +95,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             children: [
               _MonthCalendarCard(
                 selectedDate: _selectedDate,
+                dashboard: _dashboard,
                 onPreviousMonth: () => _moveMonth(-1),
                 onNextMonth: () => _moveMonth(1),
                 onSelectDate: (date) {
@@ -48,6 +103,52 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   store.updateSelectedCalendarDate(date);
                 },
               ),
+              const SizedBox(height: 14),
+              if (_isLoadingStreak)
+                const AppCard(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Loading productive-day streak for this calendar...',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (_streakError != null)
+                AppCard(
+                  color: const Color(0xFFFFF1F2),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: AppColors.danger,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _streakError!,
+                          style: const TextStyle(color: AppColors.danger),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (_dashboard != null && selectedStreakDay != null)
+                _ProductivitySummaryCard(
+                  dashboard: _dashboard!,
+                  day: selectedStreakDay,
+                ),
               const SizedBox(height: 14),
               _ViewModeSelector(
                 value: _view,
@@ -68,6 +169,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: const Icon(Icons.add_rounded),
       ),
     );
+  }
+
+  ProductivityStreakDayModel? get _selectedStreakDay {
+    final dashboard = _dashboard;
+    if (dashboard == null) return null;
+    for (final day in dashboard.calendar) {
+      if (DateUtils.isSameDay(day.date, _selectedDate)) {
+        return day;
+      }
+    }
+    return null;
   }
 
   Widget _buildAgendaView() {
@@ -189,12 +301,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
 class _MonthCalendarCard extends StatelessWidget {
   const _MonthCalendarCard({
     required this.selectedDate,
+    required this.dashboard,
     required this.onPreviousMonth,
     required this.onNextMonth,
     required this.onSelectDate,
   });
 
   final DateTime selectedDate;
+  final ProductivityStreakDashboardModel? dashboard;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
   final ValueChanged<DateTime> onSelectDate;
@@ -209,6 +323,10 @@ class _MonthCalendarCard extends StatelessWidget {
     );
     final totalCells = ((firstOffset + daysInMonth + 6) ~/ 7) * 7;
     final today = DateTime.now();
+    final streakMap = {
+      for (final day in dashboard?.calendar ?? const <ProductivityStreakDayModel>[])
+        DateTime(day.date.year, day.date.month, day.date.day): day,
+    };
 
     return AppCard(
       padding: const EdgeInsets.all(16),
@@ -280,6 +398,7 @@ class _MonthCalendarCard extends StatelessWidget {
               final isSelected = DateUtils.isSameDay(date, selectedDate);
               final isToday = DateUtils.isSameDay(date, today);
               final taskCount = MyTimeStore.instance.tasksForDate(date).length;
+              final streakDay = streakMap[DateTime(date.year, date.month, date.day)];
 
               return _CalendarDayCell(
                 date: date,
@@ -287,6 +406,7 @@ class _MonthCalendarCard extends StatelessWidget {
                 isSelected: isSelected,
                 isToday: isToday,
                 taskCount: taskCount,
+                streakDay: streakDay,
                 onTap: () => onSelectDate(date),
               );
             },
@@ -325,6 +445,7 @@ class _CalendarDayCell extends StatelessWidget {
     required this.isSelected,
     required this.isToday,
     required this.taskCount,
+    required this.streakDay,
     required this.onTap,
   });
 
@@ -333,11 +454,29 @@ class _CalendarDayCell extends StatelessWidget {
   final bool isSelected;
   final bool isToday;
   final int taskCount;
+  final ProductivityStreakDayModel? streakDay;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final hasTasks = taskCount > 0;
+    final isProductive = streakDay?.isProductive ?? false;
+    final focusMinutes = ((streakDay?.focusSeconds ?? 0) / 60).floor();
+    final hasFocusOnly = !isProductive && focusMinutes >= 25;
+    final backgroundColor = isSelected
+        ? AppColors.primary
+        : isProductive
+        ? const Color(0xFFFFE3A6)
+        : hasTasks || hasFocusOnly
+        ? AppColors.surfaceSoft
+        : Colors.white;
+    final borderColor = isSelected
+        ? AppColors.primary
+        : isProductive
+        ? AppColors.primary.withValues(alpha: 0.65)
+        : isToday
+        ? AppColors.primary.withValues(alpha: 0.35)
+        : AppColors.border;
 
     return InkWell(
       onTap: onTap,
@@ -346,18 +485,10 @@ class _CalendarDayCell extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary
-              : hasTasks
-              ? AppColors.surfaceSoft
-              : Colors.white,
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? AppColors.primary
-                : isToday
-                ? AppColors.primary.withValues(alpha: 0.35)
-                : AppColors.border,
+            color: borderColor,
           ),
           boxShadow: isSelected
               ? [
@@ -391,7 +522,11 @@ class _CalendarDayCell extends StatelessWidget {
                   width: 7,
                   height: 7,
                   decoration: BoxDecoration(
-                    color: isSelected ? Colors.white : AppColors.primary,
+                    color: isSelected
+                        ? Colors.white
+                        : isProductive
+                        ? AppColors.primary
+                        : AppColors.secondary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -403,15 +538,108 @@ class _CalendarDayCell extends StatelessWidget {
                   width: 5,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: isToday
+                    color: isProductive
+                        ? AppColors.primary
+                        : hasFocusOnly
+                        ? AppColors.secondary
+                        : isToday
                         ? AppColors.primary.withValues(alpha: 0.6)
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
                 ),
               ),
+            if (isProductive)
+              const Positioned(
+                top: 3,
+                right: 3,
+                child: Icon(
+                  Icons.local_fire_department_rounded,
+                  size: 12,
+                  color: AppColors.primary,
+                ),
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProductivitySummaryCard extends StatelessWidget {
+  const _ProductivitySummaryCard({
+    required this.dashboard,
+    required this.day,
+  });
+
+  final ProductivityStreakDashboardModel dashboard;
+  final ProductivityStreakDayModel day;
+
+  @override
+  Widget build(BuildContext context) {
+    final focusMinutes = (day.focusSeconds / 60).floor();
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.local_fire_department_rounded,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  day.isProductive
+                      ? 'Productive day'
+                      : 'Not yet a productive day',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Rule: at least 1 completed task and ${dashboard.minimumFocusMinutes}+ focus minutes.',
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SummaryPill(label: '${day.completedTaskCount} completed task(s)'),
+              _SummaryPill(label: '$focusMinutes focus minute(s)'),
+              _SummaryPill(
+                label: day.isProductive ? 'Streak counted' : 'Streak not counted',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryPill extends StatelessWidget {
+  const _SummaryPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -787,6 +1015,8 @@ class _TaskTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedDate = MyTimeStore.instance.selectedCalendarDate;
+    final isCompleted = task.isCompletedOn(selectedDate);
     return _SwipeTaskActions(
       task: task,
       onEdit: onEdit,
@@ -807,16 +1037,16 @@ class _TaskTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: FontWeight.w800,
-                decoration: task.isCompleted
+                decoration: isCompleted
                     ? TextDecoration.lineThrough
                     : TextDecoration.none,
-                color: task.isCompleted
+                color: isCompleted
                     ? AppColors.textSecondary
                     : AppColors.textPrimary,
               ),
             ),
             subtitle: Text(_taskSubtitle(task)),
-            trailing: _TaskCompletionButton(task: task),
+            trailing: _TaskCompletionButton(task: task, date: selectedDate),
             onTap: onTap,
           ),
         ),
@@ -840,6 +1070,8 @@ class _CompactTaskTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedDate = MyTimeStore.instance.selectedCalendarDate;
+    final isCompleted = task.isCompletedOn(selectedDate);
     return _SwipeTaskActions(
       task: task,
       onEdit: onEdit,
@@ -867,11 +1099,11 @@ class _CompactTaskTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: task.isCompleted
+                        color: isCompleted
                             ? AppColors.textSecondary
                             : AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
-                        decoration: task.isCompleted
+                        decoration: isCompleted
                             ? TextDecoration.lineThrough
                             : TextDecoration.none,
                       ),
@@ -887,7 +1119,7 @@ class _CompactTaskTile extends StatelessWidget {
                   ],
                 ),
               ),
-              _TaskCompletionButton(task: task),
+              _TaskCompletionButton(task: task, date: selectedDate),
             ],
           ),
         ),
@@ -897,15 +1129,21 @@ class _CompactTaskTile extends StatelessWidget {
 }
 
 class _TaskCompletionButton extends StatelessWidget {
-  const _TaskCompletionButton({required this.task});
+  const _TaskCompletionButton({required this.task, required this.date});
 
   final FocusTask task;
+  final DateTime date;
 
   @override
   Widget build(BuildContext context) {
+    final isCompleted = task.isCompletedOn(date);
     return InkWell(
       onTap: () {
-        MyTimeStore.instance.setTaskCompleted(task, !task.isCompleted);
+        MyTimeStore.instance.setTaskCompleted(
+          task,
+          !isCompleted,
+          occurrenceDate: date,
+        );
       },
       borderRadius: BorderRadius.circular(999),
       child: AnimatedContainer(
@@ -913,17 +1151,17 @@ class _TaskCompletionButton extends StatelessWidget {
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          color: task.isCompleted ? AppColors.primary : Colors.transparent,
+          color: isCompleted ? AppColors.primary : Colors.transparent,
           shape: BoxShape.circle,
           border: Border.all(
-            color: task.isCompleted ? AppColors.primary : AppColors.textMuted,
+            color: isCompleted ? AppColors.primary : AppColors.textMuted,
             width: 1.6,
           ),
         ),
         child: Icon(
           Icons.check_rounded,
           size: 18,
-          color: task.isCompleted ? Colors.white : Colors.transparent,
+          color: isCompleted ? Colors.white : Colors.transparent,
         ),
       ),
     );
@@ -1021,7 +1259,8 @@ class _TaskIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canStart = task.canStartToday;
+    final selectedDate = MyTimeStore.instance.selectedCalendarDate;
+    final canStart = task.occursOn(selectedDate);
 
     return Container(
       width: small ? 34 : 42,

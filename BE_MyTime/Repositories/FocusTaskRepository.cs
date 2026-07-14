@@ -15,6 +15,7 @@ namespace BE_MyTime.Repositories
         {
             return await _db.FocusTasks
                 .Include(t => t.Outputs)
+                .Include(t => t.CompletionLogs)
                 .Where(t => t.UserId == userId)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
@@ -24,6 +25,7 @@ namespace BE_MyTime.Repositories
         {
             return await _db.FocusTasks
                 .Include(t => t.Outputs)
+                .Include(t => t.CompletionLogs)
                 .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
         }
 

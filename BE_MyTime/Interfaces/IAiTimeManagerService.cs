@@ -1,5 +1,6 @@
 using BE_MyTime.DTOs.Ai;
 using BE_MyTime.DTOs.Schedule;
+using BE_MyTime.DTOs.Task;
 
 namespace BE_MyTime.Interfaces
 {
@@ -16,6 +17,16 @@ namespace BE_MyTime.Interfaces
         Task<SmartScheduleResponse> GenerateSmartScheduleAsync(int userId);
 
         Task<SmartScheduleResponse> GetTodaySmartScheduleAsync(int userId);
+
+        Task<AiSmartTaskPlanResponse> GenerateSmartTaskPlanAsync(
+            int userId,
+            int taskId,
+            string mode);
+
+        Task<FocusTaskResponse> ApplySmartTaskPlanAsync(
+            int userId,
+            int taskId,
+            ApplySmartTaskPlanRequest request);
 
         Task<ScheduledTaskResponse?> UpdateScheduledTaskAsync(
             int userId,

@@ -2,6 +2,7 @@ using System.Text.Json;
 using BE_MyTime.Data;
 using BE_MyTime.DTOs.Ai;
 using BE_MyTime.DTOs.Schedule;
+using BE_MyTime.DTOs.Task;
 using BE_MyTime.Interfaces;
 using BE_MyTime.Models;
 using BE_MyTime.Repositories;
@@ -92,6 +93,7 @@ namespace BE_MyTime.Services.AI
                         TaskTitle = task.Title,
                         SessionNumber = index + 1,
                         DurationMinutes = duration,
+                        IsBreak = false,
                         ScheduledDate = planDate,
                         StartTime = sessionCursor,
                         EndTime = endTime
@@ -100,7 +102,19 @@ namespace BE_MyTime.Services.AI
                     sessionCursor = endTime;
                     if (index < pomodoroDurations.Count - 1)
                     {
-                        sessionCursor = sessionCursor.Add(TimeSpan.FromMinutes(5));
+                        var breakEnd = sessionCursor.Add(TimeSpan.FromMinutes(5));
+                        pomodoroSessions.Add(new AiPomodoroSessionResponse
+                        {
+                            TaskId = task.Id,
+                            TaskTitle = "Break",
+                            SessionNumber = index + 1,
+                            DurationMinutes = 5,
+                            IsBreak = true,
+                            ScheduledDate = planDate,
+                            StartTime = sessionCursor,
+                            EndTime = breakEnd
+                        });
+                        sessionCursor = breakEnd;
                     }
                 }
 
@@ -175,12 +189,29 @@ namespace BE_MyTime.Services.AI
                         TaskTitle = task.Title,
                         SessionNumber = index + 1,
                         DurationMinutes = duration,
+                        IsBreak = false,
                         ScheduledDate = date,
                         StartTime = cursor,
                         EndTime = endTime
                     });
 
-                    cursor = endTime.Add(TimeSpan.FromMinutes(5));
+                    cursor = endTime;
+                    if (index < durations.Count - 1)
+                    {
+                        var breakEnd = cursor.Add(TimeSpan.FromMinutes(5));
+                        sessions.Add(new AiPomodoroSessionResponse
+                        {
+                            TaskId = task.Id,
+                            TaskTitle = "Break",
+                            SessionNumber = index + 1,
+                            DurationMinutes = 5,
+                            IsBreak = true,
+                            ScheduledDate = date,
+                            StartTime = cursor,
+                            EndTime = breakEnd
+                        });
+                        cursor = breakEnd;
+                    }
                 }
             }
 
@@ -336,6 +367,117 @@ namespace BE_MyTime.Services.AI
                     .Select(item => MapScheduledTask(item, persisted))
                     .ToList()
             };
+        }
+
+        public async Task<AiSmartTaskPlanResponse> GenerateSmartTaskPlanAsync(
+            int userId,
+            int taskId,
+            string mode)
+        {
+            var task = await _taskRepository.GetByIdAsync(taskId, userId)
+                ?? throw new KeyNotFoundException("Focus task not found.");
+
+            var normalizedMode = NormalizePlanMode(mode);
+            var setting = await _dbContext.UserSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.UserId == userId);
+
+            var suggestedDifficulty = SuggestDifficulty(task);
+            var suggestedMinutes = SuggestFocusMinutes(task, normalizedMode);
+            var bestTimeOfDay = SuggestBestTimeOfDay(task, setting);
+            var focusMode = SuggestFocusMode(task, normalizedMode, suggestedMinutes);
+            var breakdown = BuildTaskBreakdown(task, normalizedMode, suggestedMinutes);
+            var pomodoroPlan = BuildSmartPomodoroPlan(suggestedMinutes, focusMode);
+            var recommendation = BuildSmartRecommendation(
+                task,
+                suggestedDifficulty,
+                suggestedMinutes,
+                bestTimeOfDay,
+                normalizedMode);
+
+            _dbContext.AiPlanDrafts.Add(new AiPlanDraft
+            {
+                UserId = userId,
+                OriginalInput = $"smart_task_plan:{taskId}:{normalizedMode}",
+                SuggestedTitle = task.Title,
+                SuggestedDescription = task.Description,
+                SuggestedDate = task.ScheduledDate?.Date ?? DateTime.Today,
+                SuggestedStartTime = DefaultStartFor(bestTimeOfDay),
+                SuggestedEndTime = DefaultStartFor(bestTimeOfDay)
+                    .Add(TimeSpan.FromMinutes(suggestedMinutes)),
+                SuggestedFocusMinutes = suggestedMinutes,
+                SuggestedPriority = task.Priority,
+                SuggestedOutputsJson = JsonSerializer.Serialize(
+                    breakdown.Select(step => step.Title)),
+                Reason = recommendation,
+                Status = AiDraftStatus.Draft,
+                CreatedAt = DateTime.UtcNow
+            });
+            await _dbContext.SaveChangesAsync();
+
+            return new AiSmartTaskPlanResponse
+            {
+                TaskId = task.Id,
+                TaskTitle = task.Title,
+                PlanMode = normalizedMode,
+                SuggestedDifficulty = suggestedDifficulty,
+                SuggestedFocusMinutes = suggestedMinutes,
+                RecommendedFocusMode = focusMode,
+                BestTimeOfDay = bestTimeOfDay,
+                Recommendation = recommendation,
+                Breakdown = breakdown,
+                PomodoroPlan = pomodoroPlan,
+                GeneratedAt = DateTime.UtcNow
+            };
+        }
+
+        public async Task<FocusTaskResponse> ApplySmartTaskPlanAsync(
+            int userId,
+            int taskId,
+            ApplySmartTaskPlanRequest request)
+        {
+            var task = await _taskRepository.GetByIdAsync(taskId, userId)
+                ?? throw new KeyNotFoundException("Focus task not found.");
+
+            if (request.BreakdownTitles.Count == 0 || request.BreakdownTitles.Any(string.IsNullOrWhiteSpace))
+            {
+                throw new InvalidOperationException("Smart plan needs at least one valid breakdown step.");
+            }
+
+            task.FocusMinutes = Math.Clamp(request.SuggestedFocusMinutes, 1, 300);
+            task.Difficulty = Math.Clamp(request.SuggestedDifficulty, 1, 5);
+            task.UpdatedAt = DateTime.UtcNow;
+            task.Outputs.Clear();
+
+            foreach (var item in request.BreakdownTitles.Select((title, index) => new { title, index }))
+            {
+                task.Outputs.Add(new FocusOutput
+                {
+                    FocusTaskId = task.Id,
+                    Title = item.title.Trim(),
+                    SortOrder = item.index,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            var latestDraft = await _dbContext.AiPlanDrafts
+                .Where(item => item.UserId == userId && item.OriginalInput.StartsWith($"smart_task_plan:{taskId}:"))
+                .OrderByDescending(item => item.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (latestDraft != null)
+            {
+                latestDraft.Status = AiDraftStatus.Confirmed;
+                latestDraft.ConfirmedAt = DateTime.UtcNow;
+                latestDraft.SuggestedFocusMinutes = task.FocusMinutes;
+                latestDraft.SuggestedOutputsJson = JsonSerializer.Serialize(request.BreakdownTitles);
+                latestDraft.Reason = string.IsNullOrWhiteSpace(request.RecommendedFocusMode)
+                    ? latestDraft.Reason
+                    : $"Applied focus mode: {request.RecommendedFocusMode}";
+            }
+
+            await _taskRepository.UpdateAsync(task);
+            return MapFocusTaskResponse(task);
         }
 
         public async Task<ScheduledTaskResponse?> UpdateScheduledTaskAsync(
@@ -568,22 +710,12 @@ namespace BE_MyTime.Services.AI
                 return new List<int> { 25 };
             }
 
-            if (focusMinutes <= 30)
-            {
-                return new List<int> { 25 };
-            }
-
-            if (focusMinutes <= 60)
-            {
-                return new List<int> { 25, Math.Max(1, focusMinutes - 25) };
-            }
-
             var durations = new List<int>();
             var remaining = focusMinutes;
 
             while (remaining > 0)
             {
-                if (remaining <= 30)
+                if (remaining <= 25)
                 {
                     durations.Add(remaining);
                     break;
@@ -591,12 +723,6 @@ namespace BE_MyTime.Services.AI
 
                 durations.Add(25);
                 remaining -= 25;
-            }
-
-            if (durations.Count >= 2 && durations[^1] < 15)
-            {
-                durations[^2] += durations[^1];
-                durations.RemoveAt(durations.Count - 1);
             }
 
             return durations;
@@ -633,6 +759,323 @@ namespace BE_MyTime.Services.AI
             };
         }
 
+        private static FocusTaskResponse MapFocusTaskResponse(FocusTask task)
+        {
+            return new FocusTaskResponse
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                FocusMinutes = task.FocusMinutes,
+                Priority = task.Priority.ToString(),
+                Deadline = task.Deadline,
+                Difficulty = task.Difficulty,
+                Status = task.Status.ToString(),
+                ScheduledDate = task.ScheduledDate,
+                StartTime = task.StartTime,
+                EndTime = task.EndTime,
+                Repeat = task.Repeat.ToString(),
+                ReminderEnabled = task.ReminderEnabled,
+                ReminderTime = task.ReminderTime,
+                SyncToGoogleCalendar = task.SyncToGoogleCalendar,
+                CompletedAt = task.CompletedAt,
+                Outputs = task.Outputs
+                    .OrderBy(output => output.SortOrder)
+                    .Select(output => new FocusOutputResponse
+                    {
+                        Id = output.Id,
+                        Title = output.Title,
+                        IsCompleted = output.IsCompleted,
+                        CompletedAt = output.CompletedAt,
+                        SortOrder = output.SortOrder
+                    })
+                    .ToList(),
+                CompletionDates = task.CompletionLogs
+                    .OrderBy(item => item.CompletedOn)
+                    .Select(item => item.CompletedOn)
+                    .ToList()
+            };
+        }
+
+        private static string NormalizePlanMode(string? mode)
+        {
+            var normalized = mode?.Trim().ToLowerInvariant();
+            return normalized switch
+            {
+                "quick" => "Quick",
+                "deadline-rescue" => "Deadline Rescue",
+                _ => "Detailed"
+            };
+        }
+
+        private static int SuggestDifficulty(FocusTask task)
+        {
+            var difficulty = Math.Clamp(task.Difficulty, 1, 5);
+            if ((task.Deadline ?? task.ScheduledDate)?.Date <= DateTime.Today.AddDays(1))
+            {
+                difficulty = Math.Min(5, difficulty + 1);
+            }
+
+            if (task.FocusMinutes >= 90 || (task.Description?.Length ?? 0) > 180)
+            {
+                difficulty = Math.Min(5, difficulty + 1);
+            }
+
+            return difficulty;
+        }
+
+        private static int SuggestFocusMinutes(FocusTask task, string mode)
+        {
+            var baseMinutes = Math.Max(25, task.FocusMinutes);
+            var difficultyFactor = Math.Clamp(task.Difficulty, 1, 5) * 5;
+            var deadlineBoost = ((task.Deadline ?? task.ScheduledDate)?.Date ?? DateTime.Today) <= DateTime.Today.AddDays(1)
+                ? 10
+                : 0;
+
+            var suggested = baseMinutes + difficultyFactor + deadlineBoost;
+            suggested = mode switch
+            {
+                "Quick" => Math.Max(25, suggested - 20),
+                "Deadline Rescue" => suggested + 15,
+                _ => suggested
+            };
+
+            return Math.Clamp(((suggested + 4) / 5) * 5, 25, 300);
+        }
+
+        private static string SuggestBestTimeOfDay(FocusTask task, UserSetting? setting)
+        {
+            var difficulty = Math.Clamp(task.Difficulty, 1, 5);
+            var hasNearDeadline = ((task.Deadline ?? task.ScheduledDate)?.Date ?? DateTime.Today) <= DateTime.Today.AddDays(1);
+            var preferredStart = setting?.PreferredFocusStartTime ?? new TimeSpan(8, 0, 0);
+
+            if (difficulty >= 4 || hasNearDeadline)
+            {
+                return preferredStart.Hours <= 10 ? "Morning" : "Early focus block";
+            }
+
+            if (difficulty <= 2)
+            {
+                return preferredStart.Hours >= 13 ? "Afternoon" : "Flexible daytime";
+            }
+
+            return "Late morning";
+        }
+
+        private static string SuggestFocusMode(FocusTask task, string mode, int suggestedMinutes)
+        {
+            var title = $"{task.Title} {task.Description}".ToLowerInvariant();
+            if (mode == "Quick")
+            {
+                return "Quick Sprint 25/5";
+            }
+
+            if (title.Contains("study") || title.Contains("learn") || title.Contains("toeic") || title.Contains("hoc"))
+            {
+                return suggestedMinutes >= 90 ? "Study Flow 50/10" : "Study Burst 25/5";
+            }
+
+            if (title.Contains("code") || title.Contains("bug") || title.Contains("flutter") || title.Contains("backend"))
+            {
+                return suggestedMinutes >= 75 ? "Deep Work 50/10" : "Maker Sprint 35/5";
+            }
+
+            if (title.Contains("report") || title.Contains("write") || title.Contains("essay"))
+            {
+                return "Writing Block 45/10";
+            }
+
+            return mode == "Deadline Rescue" ? "Deadline Rescue 50/5" : "Balanced Focus 45/10";
+        }
+
+        private static List<AiSmartTaskStepResponse> BuildTaskBreakdown(
+            FocusTask task,
+            string mode,
+            int suggestedMinutes)
+        {
+            var steps = GetStepTemplates(task, mode);
+            var totalWeight = steps.Sum(item => item.Weight);
+            var safeTotal = totalWeight <= 0 ? 1 : totalWeight;
+            var remaining = suggestedMinutes;
+            var result = new List<AiSmartTaskStepResponse>();
+
+            for (var index = 0; index < steps.Count; index++)
+            {
+                var template = steps[index];
+                var minutes = index == steps.Count - 1
+                    ? remaining
+                    : Math.Max(10, (int)Math.Round((double)suggestedMinutes * template.Weight / safeTotal / 5) * 5);
+                remaining -= minutes;
+
+                result.Add(new AiSmartTaskStepResponse
+                {
+                    Order = index + 1,
+                    Title = template.Title,
+                    Minutes = Math.Max(10, minutes)
+                });
+            }
+
+            return result;
+        }
+
+        private static List<AiSmartTaskPomodoroResponse> BuildSmartPomodoroPlan(
+            int suggestedMinutes,
+            string focusMode)
+        {
+            var segments = new List<int>();
+            if (focusMode.Contains("50/10"))
+            {
+                var remaining = suggestedMinutes;
+                while (remaining > 0)
+                {
+                    var current = Math.Min(50, remaining);
+                    segments.Add(current);
+                    remaining -= current;
+                }
+            }
+            else if (focusMode.Contains("45/10"))
+            {
+                var remaining = suggestedMinutes;
+                while (remaining > 0)
+                {
+                    var current = Math.Min(45, remaining);
+                    segments.Add(current);
+                    remaining -= current;
+                }
+            }
+            else if (focusMode.Contains("35/5"))
+            {
+                var remaining = suggestedMinutes;
+                while (remaining > 0)
+                {
+                    var current = Math.Min(35, remaining);
+                    segments.Add(current);
+                    remaining -= current;
+                }
+            }
+            else
+            {
+                segments = BuildPomodoroDurations(suggestedMinutes);
+            }
+
+            var result = new List<AiSmartTaskPomodoroResponse>();
+            for (var index = 0; index < segments.Count; index++)
+            {
+                result.Add(new AiSmartTaskPomodoroResponse
+                {
+                    Label = $"Session {index + 1}",
+                    Minutes = segments[index],
+                    IsBreak = false
+                });
+
+                if (index < segments.Count - 1)
+                {
+                    result.Add(new AiSmartTaskPomodoroResponse
+                    {
+                        Label = "Break",
+                        Minutes = focusMode.Contains("/10") ? 10 : 5,
+                        IsBreak = true
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        private static string BuildSmartRecommendation(
+            FocusTask task,
+            int suggestedDifficulty,
+            int suggestedMinutes,
+            string bestTimeOfDay,
+            string mode)
+        {
+            var deadline = task.Deadline ?? task.ScheduledDate;
+            var urgencyText = deadline.HasValue && deadline.Value.Date <= DateTime.Today.AddDays(1)
+                ? "The deadline is near, so keep momentum and avoid context switching."
+                : "You can keep a steady pace and protect one clean focus block.";
+
+            return $"{urgencyText} AI suggests {suggestedMinutes} minutes at difficulty {suggestedDifficulty}/5. Best focus period: {bestTimeOfDay}. Mode: {mode}.";
+        }
+
+        private static TimeSpan DefaultStartFor(string bestTimeOfDay)
+        {
+            return bestTimeOfDay switch
+            {
+                "Morning" => new TimeSpan(8, 0, 0),
+                "Late morning" => new TimeSpan(10, 0, 0),
+                "Afternoon" => new TimeSpan(14, 0, 0),
+                "Early focus block" => new TimeSpan(9, 0, 0),
+                _ => new TimeSpan(11, 0, 0)
+            };
+        }
+
+        private static List<(string Title, int Weight)> GetStepTemplates(FocusTask task, string mode)
+        {
+            var text = $"{task.Title} {task.Description}".ToLowerInvariant();
+            if (mode == "Quick")
+            {
+                return new List<(string, int)>
+                {
+                    ("Clarify the exact outcome", 2),
+                    ("Do the highest-impact part first", 5),
+                    ("Review and save the result", 2),
+                };
+            }
+
+            if (text.Contains("flutter") || text.Contains("code") || text.Contains("bug") || text.Contains("backend"))
+            {
+                return new List<(string, int)>
+                {
+                    ("Review the requirement and target output", 2),
+                    ("Inspect the relevant files and current flow", 3),
+                    ("Implement the main logic change", 5),
+                    ("Run a quick verification pass", 2),
+                    ("Refine and document edge cases", 2),
+                };
+            }
+
+            if (text.Contains("study") || text.Contains("learn") || text.Contains("toeic") || text.Contains("hoc"))
+            {
+                return new List<(string, int)>
+                {
+                    ("Warm up and define the learning target", 2),
+                    ("Study the core material", 4),
+                    ("Practice one focused exercise", 4),
+                    ("Review mistakes and take notes", 2),
+                };
+            }
+
+            if (text.Contains("report") || text.Contains("write") || text.Contains("essay"))
+            {
+                return new List<(string, int)>
+                {
+                    ("Outline the key points", 2),
+                    ("Draft the main content", 5),
+                    ("Edit for clarity and completeness", 3),
+                    ("Final review and polish", 2),
+                };
+            }
+
+            if (mode == "Deadline Rescue")
+            {
+                return new List<(string, int)>
+                {
+                    ("Identify the minimum viable deliverable", 2),
+                    ("Finish the highest-priority section", 5),
+                    ("Complete the remaining must-have work", 4),
+                    ("Do a rapid review before submission", 2),
+                };
+            }
+
+            return new List<(string, int)>
+            {
+                ("Clarify the scope and success criteria", 2),
+                ("Work on the main task block", 5),
+                ("Complete the supporting details", 3),
+                ("Review and finalize", 2),
+            };
+        }
+
         private sealed record ScoredTask(
             FocusTask Task,
             double Score,
@@ -643,7 +1086,13 @@ namespace BE_MyTime.Services.AI
     {
         public static bool IsCompleted(this FocusTask task)
         {
-            return task.Status == FocusTaskStatus.Completed;
+            if (task.Repeat == TaskRepeat.None)
+            {
+                return task.Status == FocusTaskStatus.Completed;
+            }
+
+            var today = DateTime.Today;
+            return task.CompletionLogs.Any(item => item.CompletedOn.Date == today);
         }
     }
 }

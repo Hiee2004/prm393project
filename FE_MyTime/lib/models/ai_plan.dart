@@ -87,6 +87,7 @@ class AiPomodoroSession {
     required this.taskTitle,
     required this.sessionNumber,
     required this.durationMinutes,
+    required this.isBreak,
     required this.scheduledDate,
     required this.startTime,
     required this.endTime,
@@ -96,6 +97,7 @@ class AiPomodoroSession {
   final String taskTitle;
   final int sessionNumber;
   final int durationMinutes;
+  final bool isBreak;
   final DateTime scheduledDate;
   final String startTime;
   final String endTime;
@@ -106,6 +108,7 @@ class AiPomodoroSession {
       taskTitle: json['taskTitle'] as String? ?? '',
       sessionNumber: json['sessionNumber'] as int? ?? 1,
       durationMinutes: json['durationMinutes'] as int? ?? 25,
+      isBreak: json['isBreak'] as bool? ?? false,
       scheduledDate: DateTime.parse(json['scheduledDate'] as String),
       startTime: json['startTime'] as String? ?? '08:00:00',
       endTime: json['endTime'] as String? ?? '08:25:00',

@@ -1,9 +1,13 @@
-﻿namespace BE_MyTime.DTOs.Task
-{
-    public class FocusOutputResponse
-    {
-        public int Id { get; set; }
+using System.ComponentModel.DataAnnotations;
 
+namespace BE_MyTime.DTOs.Task
+{
+    public class FocusTaskOutputUpsertRequest
+    {
+        public int? Id { get; set; }
+
+        [Required]
+        [MaxLength(250)]
         public string Title { get; set; } = string.Empty;
 
         public bool IsCompleted { get; set; }

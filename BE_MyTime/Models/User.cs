@@ -49,9 +49,5 @@ namespace BE_MyTime.Models
         public ICollection<AiPlanDraft> AiPlanDrafts { get; set; } = new List<AiPlanDraft>();
 
         public ICollection<ScheduledTask> ScheduledTasks { get; set; } = new List<ScheduledTask>();
-
-        public ICollection<Habit> Habits { get; set; } = new List<Habit>();
-
-        public UserProgress? Progress { get; set; }
     }
 }

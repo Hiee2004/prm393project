@@ -3,7 +3,6 @@ using BE_MyTime.Interfaces;
 using BE_MyTime.Repositories;
 using BE_MyTime.Services.Auth;
 using BE_MyTime.Services.AI;
-using BE_MyTime.Services.Habits;
 using BE_MyTime.Services.Streaks;
 using BE_MyTime.Services.Tasks;
 using BE_MyTime.Services.Users;
@@ -90,13 +89,12 @@ namespace BE_MyTime
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<UserRepository>();
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<FocusTaskRepository>();
-            builder.Services.AddScoped<HabitRepository>();
 
             builder.Services.AddScoped<
                 IFocusTaskService,
                 FocusTaskService>();
-            builder.Services.AddScoped<IHabitService, HabitService>();
             builder.Services.AddScoped<IProductivityStreakService, ProductivityStreakService>();
             builder.Services.AddScoped<IAiTimeManagerService, AiTimeManagerService>();
             builder.Services.AddScoped<FocusSessionRepository>();

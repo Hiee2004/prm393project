@@ -35,5 +35,7 @@
         public DateTime? CompletedAt { get; set; }
 
         public List<FocusOutputResponse> Outputs { get; set; } = new();
+
+        public List<DateTime> CompletionDates { get; set; } = new();
     }
 }
