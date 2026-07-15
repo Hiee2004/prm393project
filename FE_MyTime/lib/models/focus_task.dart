@@ -52,7 +52,6 @@ class FocusTask {
     required this.outputs,
     DateTime? scheduledDate,
     this.deadline,
-    this.difficulty = 3,
     this.startTime,
     this.endTime,
     this.repeat = TaskRepeat.none,
@@ -72,7 +71,6 @@ class FocusTask {
   List<FocusOutput> outputs;
   DateTime scheduledDate;
   DateTime? deadline;
-  int difficulty;
   String? startTime;
   String? endTime;
   TaskRepeat repeat;
@@ -94,7 +92,6 @@ class FocusTask {
       deadline: json['deadline'] == null
           ? null
           : DateTime.parse(json['deadline']),
-      difficulty: json['difficulty'] ?? 3,
       scheduledDate: json['scheduledDate'] == null
           ? DateTime.now()
           : DateTime.parse(json['scheduledDate']),
@@ -132,7 +129,6 @@ class FocusTask {
       'focusMinutes': focusMinutes,
       'priority': _priorityToBackend(priority),
       'deadline': (deadline ?? scheduledDate).toIso8601String(),
-      'difficulty': difficulty,
       'scheduledDate': scheduledDate.toIso8601String(),
       'startTime': startTime,
       'endTime': endTime,
@@ -151,7 +147,6 @@ class FocusTask {
       'focusMinutes': focusMinutes,
       'priority': _priorityToBackend(priority),
       'deadline': (deadline ?? scheduledDate).toIso8601String(),
-      'difficulty': difficulty,
       'status': _statusToBackend(status),
       'scheduledDate': scheduledDate.toIso8601String(),
       'startTime': startTime,
@@ -161,6 +156,32 @@ class FocusTask {
       'reminderTime': reminderTime,
       'syncToGoogleCalendar': syncToGoogleCalendar,
       'occurrenceDate': occurrenceDate?.toIso8601String(),
+      'outputs': [
+        for (var index = 0; index < outputs.length; index++)
+          outputs[index].toUpdateJson(index),
+      ],
+    };
+  }
+
+  Map<String, dynamic> toSnapshotJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'focusMinutes': focusMinutes,
+      'priority': _priorityToBackend(priority),
+      'deadline': deadline?.toIso8601String(),
+      'scheduledDate': scheduledDate.toIso8601String(),
+      'startTime': startTime,
+      'endTime': endTime,
+      'repeat': _repeatToBackend(repeat),
+      'reminderEnabled': reminderEnabled,
+      'reminderTime': reminderTime,
+      'syncToGoogleCalendar': syncToGoogleCalendar,
+      'status': _statusToBackend(status),
+      'completedAt': completedAt?.toIso8601String(),
+      'completionDates':
+          completionDates.map((item) => item.toIso8601String()).toList(),
       'outputs': [
         for (var index = 0; index < outputs.length; index++)
           outputs[index].toUpdateJson(index),

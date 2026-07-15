@@ -22,6 +22,8 @@ class TaskListScreen extends StatefulWidget {
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
+  static const int _tasksPerDayPage = 10;
+
   TaskStatusFilter _statusFilter = TaskStatusFilter.all;
   TaskPriorityFilter _priorityFilter = TaskPriorityFilter.all;
   @override
@@ -31,7 +33,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   List<FocusTask> _filteredTasks(List<FocusTask> tasks) {
-    return tasks.where((task) {
+    final filtered = tasks.where((task) {
       final matchesStatus = switch (_statusFilter) {
         TaskStatusFilter.all => true,
         TaskStatusFilter.todo => task.status == FocusTaskStatus.todo,
@@ -49,6 +51,43 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
       return matchesStatus && matchesPriority;
     }).toList();
+
+    filtered.sort((first, second) {
+      final firstDate = DateTime(
+        first.scheduledDate.year,
+        first.scheduledDate.month,
+        first.scheduledDate.day,
+      );
+      final secondDate = DateTime(
+        second.scheduledDate.year,
+        second.scheduledDate.month,
+        second.scheduledDate.day,
+      );
+      final byDate = firstDate.compareTo(secondDate);
+      if (byDate != 0) return byDate;
+      if (first.isCompleted != second.isCompleted) {
+        return first.isCompleted ? 1 : -1;
+      }
+      return first.title.toLowerCase().compareTo(second.title.toLowerCase());
+    });
+    return filtered;
+  }
+
+  List<_TaskDayGroup> _groupTasksByDate(List<FocusTask> tasks) {
+    final grouped = <DateTime, List<FocusTask>>{};
+    for (final task in tasks) {
+      final key = DateTime(
+        task.scheduledDate.year,
+        task.scheduledDate.month,
+        task.scheduledDate.day,
+      );
+      grouped.putIfAbsent(key, () => []).add(task);
+    }
+
+    final dates = grouped.keys.toList()..sort();
+    return [
+      for (final date in dates) _TaskDayGroup(date: date, tasks: grouped[date]!),
+    ];
   }
 
   void _openTask(FocusTask task) {
@@ -137,6 +176,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
         animation: store,
         builder: (context, child) {
           final tasks = _filteredTasks(store.tasks);
+          final dayGroups = _groupTasksByDate(tasks);
 
           return CustomScrollView(
             slivers: [
@@ -210,26 +250,26 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 92),
                   sliver: SliverList.separated(
-                    itemCount: tasks.length,
+                    itemCount: dayGroups.length,
                     separatorBuilder: (context, index) {
                       return const SizedBox(height: 14);
                     },
                     itemBuilder: (context, index) {
-                      final task = tasks[index];
-                      return _TaskSwipeActions(
-                        task: task,
-                        onEdit: () => _editTask(task),
-                        onDelete: () => _deleteTask(task),
-                        child: _TaskCard(
-                          task: task,
-                          onTap: () => _openTask(task),
-                          onEdit: () => _editTask(task),
-                          onDelete: () => _deleteTask(task),
-                          onOpenSmartPlan: () => _openSmartPlan(task),
-                          onOpenTimeline: () => Navigator.pushNamed(
-                            context,
-                            AppRoutes.aiDashboard,
-                          ),
+                      final group = dayGroups[index];
+                      return _TaskDayGroupCard(
+                        key: ValueKey(
+                          'task-day-${group.date.year}-${group.date.month}-${group.date.day}-${group.tasks.length}',
+                        ),
+                        date: group.date,
+                        tasks: group.tasks,
+                        tasksPerPage: _tasksPerDayPage,
+                        onOpenTask: _openTask,
+                        onEditTask: _editTask,
+                        onDeleteTask: _deleteTask,
+                        onOpenSmartPlan: _openSmartPlan,
+                        onOpenTimeline: () => Navigator.pushNamed(
+                          context,
+                          AppRoutes.aiDashboard,
                         ),
                       );
                     },
@@ -247,6 +287,171 @@ class _TaskListScreenState extends State<TaskListScreen> {
         label: const Text('New task'),
       ),
       bottomNavigationBar: const AppBottomNavigation(selectedIndex: 1),
+    );
+  }
+}
+
+class _TaskDayGroup {
+  const _TaskDayGroup({required this.date, required this.tasks});
+
+  final DateTime date;
+  final List<FocusTask> tasks;
+}
+
+class _TaskDayGroupCard extends StatefulWidget {
+  const _TaskDayGroupCard({
+    super.key,
+    required this.date,
+    required this.tasks,
+    required this.tasksPerPage,
+    required this.onOpenTask,
+    required this.onEditTask,
+    required this.onDeleteTask,
+    required this.onOpenSmartPlan,
+    required this.onOpenTimeline,
+  });
+
+  final DateTime date;
+  final List<FocusTask> tasks;
+  final int tasksPerPage;
+  final ValueChanged<FocusTask> onOpenTask;
+  final ValueChanged<FocusTask> onEditTask;
+  final Future<void> Function(FocusTask task) onDeleteTask;
+  final ValueChanged<FocusTask> onOpenSmartPlan;
+  final VoidCallback onOpenTimeline;
+
+  @override
+  State<_TaskDayGroupCard> createState() => _TaskDayGroupCardState();
+}
+
+class _TaskDayGroupCardState extends State<_TaskDayGroupCard> {
+  int _pageIndex = 0;
+
+  @override
+  void didUpdateWidget(covariant _TaskDayGroupCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final maxPage = _pageCount - 1;
+    if (_pageIndex > maxPage) {
+      _pageIndex = maxPage < 0 ? 0 : maxPage;
+    }
+  }
+
+  int get _pageCount {
+    return (widget.tasks.length / widget.tasksPerPage).ceil().clamp(1, 9999);
+  }
+
+  List<FocusTask> get _visibleTasks {
+    final start = _pageIndex * widget.tasksPerPage;
+    final end = (start + widget.tasksPerPage).clamp(0, widget.tasks.length);
+    return widget.tasks.sublist(start, end);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final totalTasks = widget.tasks.length;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _formatDate(widget.date),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$totalTasks task(s) planned',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_pageCount > 1)
+                _InlinePager(
+                  currentPage: _pageIndex + 1,
+                  totalPages: _pageCount,
+                  onPrevious: _pageIndex == 0
+                      ? null
+                      : () => setState(() => _pageIndex--),
+                  onNext: _pageIndex >= _pageCount - 1
+                      ? null
+                      : () => setState(() => _pageIndex++),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ..._visibleTasks.map((task) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _TaskSwipeActions(
+                task: task,
+                onEdit: () => widget.onEditTask(task),
+                onDelete: () => widget.onDeleteTask(task),
+                child: _TaskCard(
+                  task: task,
+                  onTap: () => widget.onOpenTask(task),
+                  onEdit: () => widget.onEditTask(task),
+                  onDelete: () => widget.onDeleteTask(task),
+                  onOpenSmartPlan: () => widget.onOpenSmartPlan(task),
+                  onOpenTimeline: widget.onOpenTimeline,
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlinePager extends StatelessWidget {
+  const _InlinePager({
+    required this.currentPage,
+    required this.totalPages,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final int currentPage;
+  final int totalPages;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Previous page',
+          visualDensity: VisualDensity.compact,
+          onPressed: onPrevious,
+          icon: const Icon(Icons.chevron_left_rounded),
+        ),
+        Text(
+          '$currentPage/$totalPages',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        IconButton(
+          tooltip: 'Next page',
+          visualDensity: VisualDensity.compact,
+          onPressed: onNext,
+          icon: const Icon(Icons.chevron_right_rounded),
+        ),
+      ],
     );
   }
 }
@@ -670,100 +875,93 @@ class _TaskCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        detailText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Tooltip(
-                      message: 'Create Smart Plan',
-                      child: InkWell(
-                        onTap: onOpenSmartPlan,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compactActions = constraints.maxWidth < 265;
+
+                    if (compactActions) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            detailText,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF2D9),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Icon(
-                                Icons.auto_awesome_rounded,
-                                size: 14,
-                                color: AppColors.primary,
+                              _TaskActionChip(
+                                icon: Icons.auto_awesome_rounded,
+                                label: 'Smart Plan',
+                                backgroundColor: const Color(0xFFFFF2D9),
+                                foregroundColor: AppColors.primary,
+                                tooltip: 'Create Smart Plan',
+                                onTap: onOpenSmartPlan,
                               ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Smart Plan',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
+                              _TaskActionChip(
+                                icon: Icons.calendar_view_day_rounded,
+                                label: 'Timeline',
+                                backgroundColor: theme.colorScheme.primary
+                                    .withValues(alpha: 0.10),
+                                foregroundColor: theme.colorScheme.primary,
+                                tooltip: 'View in AI Timeline',
+                                onTap: onOpenTimeline,
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Tooltip(
-                      message: 'View in AI Timeline',
-                      child: InkWell(
-                        onTap: onOpenTimeline,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.calendar_view_day_rounded,
-                                size: 14,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Timeline',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ],
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            detailText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ],
+                        const SizedBox(width: 4),
+                        _TaskActionChip(
+                          icon: Icons.auto_awesome_rounded,
+                          label: 'Smart Plan',
+                          backgroundColor: const Color(0xFFFFF2D9),
+                          foregroundColor: AppColors.primary,
+                          tooltip: 'Create Smart Plan',
+                          onTap: onOpenSmartPlan,
+                        ),
+                        const SizedBox(width: 4),
+                        _TaskActionChip(
+                          icon: Icons.calendar_view_day_rounded,
+                          label: 'Timeline',
+                          backgroundColor: theme.colorScheme.primary.withValues(
+                            alpha: 0.10,
+                          ),
+                          foregroundColor: theme.colorScheme.primary,
+                          tooltip: 'View in AI Timeline',
+                          onTap: onOpenTimeline,
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -869,6 +1067,57 @@ class _InfoBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TaskActionChip extends StatelessWidget {
+  const _TaskActionChip({
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: foregroundColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: foregroundColor,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

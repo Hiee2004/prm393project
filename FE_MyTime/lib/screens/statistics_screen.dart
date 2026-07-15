@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:project/core/routes/app_routes.dart';
 import 'package:project/core/theme/app_theme.dart';
@@ -17,14 +19,23 @@ class StatisticsScreen extends StatefulWidget {
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
   late DateTime _selectedWeekStart;
+  late final PageController _sessionPageController;
+  int _selectedSessionPage = 0;
 
   @override
   void initState() {
     super.initState();
+    _sessionPageController = PageController(viewportFraction: 0.94);
     _selectedWeekStart = _startOfWeek(
       MyTimeStore.instance.selectedCalendarDate,
     );
     MyTimeStore.instance.loadSessionsFromApi();
+  }
+
+  @override
+  void dispose() {
+    _sessionPageController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickWeek() async {
@@ -52,11 +63,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         animation: store,
         builder: (context, child) {
           final sessions = store.focusSessions;
-          final result = sessions.isNotEmpty
-              ? _SessionSnapshot.fromBackend(store.latestFocusSession!)
-              : (store.latestSession == null
-                    ? null
-                    : _SessionSnapshot.fromLocal(store.latestSession!));
+          final sessionSnapshots = _buildSessionSnapshots(store);
+          final result = sessionSnapshots.isEmpty ? null : sessionSnapshots.first;
           final completionRate = _completionRate(result);
           final weeklyStats = _buildWeeklyStats(
             sessions: sessions,
@@ -113,7 +121,19 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   },
                 )
               else
-                _LatestSession(result: result),
+                _LatestSessionCarousel(
+                  results: sessionSnapshots,
+                  controller: _sessionPageController,
+                  currentIndex: sessionSnapshots.isEmpty
+                      ? 0
+                      : math.min(
+                          _selectedSessionPage,
+                          sessionSnapshots.length - 1,
+                        ),
+                  onPageChanged: (index) {
+                    setState(() => _selectedSessionPage = index);
+                  },
+                ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () {
@@ -262,7 +282,7 @@ class _WeeklyProgressCard extends StatelessWidget {
         children: [
           const SectionHeader(
             title: 'Daily completed',
-            subtitle: 'This week focus output progress.',
+            subtitle: 'This week task completion progress.',
           ),
           const SizedBox(height: 10),
           Align(
@@ -443,60 +463,114 @@ class _CompletionCard extends StatelessWidget {
   }
 }
 
-class _LatestSession extends StatelessWidget {
-  const _LatestSession({required this.result});
+class _LatestSessionCarousel extends StatelessWidget {
+  const _LatestSessionCarousel({
+    required this.results,
+    required this.controller,
+    required this.currentIndex,
+    required this.onPageChanged,
+  });
 
-  final _SessionSnapshot result;
+  final List<_SessionSnapshot> results;
+  final PageController controller;
+  final int currentIndex;
+  final ValueChanged<int> onPageChanged;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(
-          title: 'Latest session',
-          subtitle: 'Detailed result from the last Focus Time.',
+        SectionHeader(
+          title: results.length > 1 ? 'Task history' : 'Latest task',
+          subtitle: results.length > 1
+              ? 'Newest task result first. Swipe left or right to see more.'
+              : 'Detailed result from the latest task focus.',
         ),
         const SizedBox(height: 10),
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              _ResultHeader(taskTitle: result.taskTitle),
-              const Divider(height: 1),
-              _ResultRow(
-                label: 'Planned time',
-                value: _formatDuration(result.plannedSeconds),
-              ),
-              _ResultRow(
-                label: 'Actual time',
-                value: _formatDuration(result.actualFocusSeconds),
-              ),
-              _ResultRow(
-                label: 'Completed outputs',
-                value: '${result.completedOutputs}/${result.totalOutputs}',
-              ),
-              _ResultRow(
-                label: 'Completion rate',
-                value: '${(_completionRate(result) * 100).round()}%',
-              ),
-              _ResultRow(
-                label: 'Distractions',
-                value: '${result.distractionCount}',
-              ),
-              if (result.completedOutputTitles.isNotEmpty)
-                _ResultRow(
-                  label: 'Completed',
-                  value: result.completedOutputTitles.join(', '),
+        SizedBox(
+          height: 370,
+          child: PageView.builder(
+            controller: controller,
+            itemCount: results.length,
+            onPageChanged: onPageChanged,
+            itemBuilder: (context, index) {
+              final result = results[index];
+              return Padding(
+                padding: EdgeInsets.only(right: index == results.length - 1 ? 0 : 10),
+                child: AppCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      _ResultHeader(
+                        taskTitle: result.taskTitle,
+                        sessionIndexLabel: 'Task ${index + 1}/${results.length}',
+                      ),
+                      const Divider(height: 1),
+                      _ResultRow(
+                        label: 'Planned time',
+                        value: _formatDuration(result.plannedSeconds),
+                      ),
+                      _ResultRow(
+                        label: 'Actual time',
+                        value: _formatDuration(result.actualFocusSeconds),
+                      ),
+                      _ResultRow(
+                        label: 'Completed outputs',
+                        value: '${result.completedOutputs}/${result.totalOutputs}',
+                      ),
+                      _ResultRow(
+                        label: 'Completion rate',
+                        value: '${(_completionRate(result) * 100).round()}%',
+                      ),
+                      _ResultRow(
+                        label: 'Distractions',
+                        value: '${result.distractionCount}',
+                      ),
+                      _ResultRow(
+                        label: 'Finished at',
+                        value: _formatSessionDateTime(result.finishedAt),
+                      ),
+                      if (result.completedOutputTitles.isNotEmpty)
+                        _ResultRow(
+                          label: 'Completed',
+                          value: result.completedOutputTitles.join(', '),
+                        ),
+                      if (result.unfinishedOutputTitles.isNotEmpty)
+                        _ResultRow(
+                          label: 'Remaining',
+                          value: result.unfinishedOutputTitles.join(', '),
+                        ),
+                    ],
+                  ),
                 ),
-              if (result.unfinishedOutputTitles.isNotEmpty)
-                _ResultRow(
-                  label: 'Remaining',
-                  value: result.unfinishedOutputTitles.join(', '),
-                ),
-            ],
+              );
+            },
           ),
         ),
+        if (results.length > 1) ...[
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(results.length, (index) {
+              final isActive = index == currentIndex;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: isActive ? 20 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.secondary.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }),
+          ),
+        ],
         const SizedBox(height: 18),
       ],
     );
@@ -504,9 +578,13 @@ class _LatestSession extends StatelessWidget {
 }
 
 class _ResultHeader extends StatelessWidget {
-  const _ResultHeader({required this.taskTitle});
+  const _ResultHeader({
+    required this.taskTitle,
+    required this.sessionIndexLabel,
+  });
 
   final String taskTitle;
+  final String sessionIndexLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -527,9 +605,23 @@ class _ResultHeader extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              taskTitle,
-              style: Theme.of(context).textTheme.titleMedium,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  taskTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  sessionIndexLabel,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -652,7 +744,8 @@ _WeeklyStats _buildWeeklyStats({
 }) {
   final weekEnd = weekStart.add(const Duration(days: 6));
   final completedByDay = List<int>.filled(7, 0);
-  final totalByDay = List<int>.filled(7, 0);
+  final totalTaskIdsByDay = List.generate(7, (_) => <int>{});
+  final completedTaskIdsByDay = List.generate(7, (_) => <int>{});
 
   for (final session in sessions) {
     final date = (session.completedAt ?? session.startedAt).toLocal();
@@ -660,8 +753,15 @@ _WeeklyStats _buildWeeklyStats({
     if (day.isBefore(weekStart) || day.isAfter(weekEnd)) continue;
 
     final index = day.difference(weekStart).inDays;
-    completedByDay[index] += session.completedOutputs;
-    totalByDay[index] += session.totalOutputs;
+    totalTaskIdsByDay[index].add(session.focusTaskId);
+    if (session.totalOutputs > 0 &&
+        session.completedOutputs >= session.totalOutputs) {
+      completedTaskIdsByDay[index].add(session.focusTaskId);
+    }
+  }
+
+  for (var index = 0; index < 7; index++) {
+    completedByDay[index] = completedTaskIdsByDay[index].length;
   }
 
   final maxCompleted = completedByDay.reduce((a, b) => a > b ? a : b);
@@ -671,7 +771,10 @@ _WeeklyStats _buildWeeklyStats({
       .toList();
 
   final completedSum = completedByDay.fold(0, (sum, item) => sum + item);
-  final totalSum = totalByDay.fold(0, (sum, item) => sum + item);
+  final totalSum = totalTaskIdsByDay.fold<int>(
+    0,
+    (sum, item) => sum + item.length,
+  );
   final completionPercent = totalSum == 0
       ? 0
       : ((completedSum / totalSum) * 100).round();
@@ -701,6 +804,36 @@ _WeeklyStats _buildWeeklyStats({
   );
 }
 
+List<_SessionSnapshot> _buildSessionSnapshots(MyTimeStore store) {
+  if (store.focusSessions.isNotEmpty) {
+    final sessions = List<FocusSession>.from(store.focusSessions)
+      ..sort((first, second) {
+        final firstDate = first.completedAt ?? first.startedAt;
+        final secondDate = second.completedAt ?? second.startedAt;
+        return secondDate.compareTo(firstDate);
+      });
+
+    final latestByTask = <String, FocusSession>{};
+    for (final session in sessions) {
+      final taskKey = session.focusTaskId > 0
+          ? 'backend_${session.focusTaskId}'
+          : 'title_${session.taskTitle.toLowerCase().trim()}';
+      latestByTask.putIfAbsent(taskKey, () => session);
+    }
+
+    return latestByTask.values.map(_SessionSnapshot.fromBackend).toList();
+  }
+
+  final localSessions = List<FocusSessionResult>.from(store.sessions)
+    ..sort((first, second) => second.finishedAt.compareTo(first.finishedAt));
+  final latestByTask = <String, FocusSessionResult>{};
+  for (final session in localSessions) {
+    final taskKey = session.taskTitle.toLowerCase().trim();
+    latestByTask.putIfAbsent(taskKey, () => session);
+  }
+  return latestByTask.values.map(_SessionSnapshot.fromLocal).toList();
+}
+
 DateTime _startOfWeek(DateTime date) {
   final local = DateTime(date.year, date.month, date.day);
   final difference = local.weekday % 7;
@@ -720,6 +853,7 @@ class _SessionSnapshot {
     required this.completedOutputs,
     required this.totalOutputs,
     required this.distractionCount,
+    required this.finishedAt,
     this.completedOutputTitles = const [],
     this.unfinishedOutputTitles = const [],
   });
@@ -730,6 +864,7 @@ class _SessionSnapshot {
   final int completedOutputs;
   final int totalOutputs;
   final int distractionCount;
+  final DateTime finishedAt;
   final List<String> completedOutputTitles;
   final List<String> unfinishedOutputTitles;
 
@@ -741,6 +876,7 @@ class _SessionSnapshot {
       completedOutputs: session.completedOutputs,
       totalOutputs: session.totalOutputs,
       distractionCount: session.distractionCount,
+      finishedAt: session.completedAt ?? session.startedAt,
     );
   }
 
@@ -752,6 +888,7 @@ class _SessionSnapshot {
       completedOutputs: session.completedOutputs,
       totalOutputs: session.totalOutputs,
       distractionCount: session.distractions,
+      finishedAt: session.finishedAt,
       completedOutputTitles: session.completedOutputTitles,
       unfinishedOutputTitles: session.unfinishedOutputTitles,
     );
@@ -765,6 +902,13 @@ String _formatDuration(int seconds) {
   final remainingSeconds = seconds % 60;
   if (remainingSeconds == 0) return '${minutes}m';
   return '${minutes}m ${remainingSeconds}s';
+}
+
+String _formatSessionDateTime(DateTime value) {
+  final local = value.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '${_formatShortDate(local)} $hour:$minute';
 }
 
 String _formatShortDate(DateTime date) {

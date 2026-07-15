@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
+import 'package:project/core/theme/app_theme.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -15,25 +15,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _pages = [
     _OnboardingItem(
+      index: 0,
       icon: Icons.checklist_rounded,
       title: 'Define clear outputs',
       description:
           'Break every task into small results that are easy to track.',
-      color: AppColors.primary,
     ),
     _OnboardingItem(
+      index: 1,
       icon: Icons.timer_rounded,
       title: 'Start Focus Time',
       description:
           'Use the timer to stay with one task and avoid distractions.',
-      color: AppColors.secondary,
     ),
     _OnboardingItem(
+      index: 2,
       icon: Icons.insights_rounded,
       title: 'Review your progress',
       description:
           'Check sessions, focus time, outputs, and improvement points.',
-      color: AppColors.warning,
     ),
   ];
 
@@ -59,6 +59,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -73,7 +75,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     onPressed: () {
                       Navigator.pushReplacementNamed(context, AppRoutes.login);
                     },
-                    child: const Text('Skip'),
+                    child: Text(
+                      'Skip',
+                      style: TextStyle(color: theme.colorScheme.primary),
+                    ),
                   ),
                 ],
               ),
@@ -116,17 +121,19 @@ class _BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Row(
       children: [
         Container(
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: theme.colorScheme.primary,
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.22),
+                color: theme.colorScheme.primary.withValues(alpha: 0.22),
                 blurRadius: 16,
                 offset: const Offset(0, 8),
               ),
@@ -135,10 +142,10 @@ class _BrandMark extends StatelessWidget {
           child: const Icon(Icons.access_time_rounded, color: Colors.white),
         ),
         const SizedBox(width: 10),
-        const Text(
+        Text(
           'MyTime',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: theme.colorScheme.onSurface,
             fontSize: 22,
             fontWeight: FontWeight.w900,
           ),
@@ -155,63 +162,86 @@ class _OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 34),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: item.color.withValues(alpha: 0.12),
-                blurRadius: 28,
-                offset: const Offset(0, 16),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              _IllustrationBadge(item: item),
-              const SizedBox(height: 32),
-              Text(
-                item.title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  height: 1.1,
+    final theme = Theme.of(context);
+    final scene = theme.extension<AppSceneTheme>()!;
+    final accentColors = [
+      theme.colorScheme.primary,
+      theme.colorScheme.secondary,
+      scene.glowSecondary,
+    ];
+    final accent = accentColors[item.index % accentColors.length];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight - 16),
+            child: Center(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 34),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withValues(
+                    alpha: theme.brightness == Brightness.dark ? 0.88 : 0.96,
+                  ),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: scene.cardBorder),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.14),
+                      blurRadius: 28,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _IllustrationBadge(item: item, accent: accent),
+                    const SizedBox(height: 32),
+                    Text(
+                      item.title,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      item.description,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                        fontSize: 16,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                item.description,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 16,
-                  height: 1.45,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
 
 class _IllustrationBadge extends StatelessWidget {
-  const _IllustrationBadge({required this.item});
+  const _IllustrationBadge({required this.item, required this.accent});
 
   final _OnboardingItem item;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scene = theme.extension<AppSceneTheme>()!;
+
     return Container(
       width: 160,
       height: 160,
@@ -220,7 +250,7 @@ class _IllustrationBadge extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [item.color.withValues(alpha: 0.14), AppColors.surfaceSoft],
+          colors: [accent.withValues(alpha: 0.14), scene.glowSecondary],
         ),
       ),
       child: Center(
@@ -228,11 +258,11 @@ class _IllustrationBadge extends StatelessWidget {
           width: 92,
           height: 92,
           decoration: BoxDecoration(
-            color: item.color,
+            color: accent,
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: item.color.withValues(alpha: 0.24),
+                color: accent.withValues(alpha: 0.24),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -252,13 +282,17 @@ class _OnboardingDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       width: isActive ? 28 : 9,
       height: 9,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.primary : AppColors.border,
+        color: isActive
+            ? theme.colorScheme.primary
+            : theme.dividerColor.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
       ),
     );
@@ -270,11 +304,11 @@ class _OnboardingItem {
     required this.icon,
     required this.title,
     required this.description,
-    required this.color,
+    required this.index,
   });
 
   final IconData icon;
   final String title;
   final String description;
-  final Color color;
+  final int index;
 }

@@ -5,6 +5,11 @@ import 'package:project/services/my_time_store.dart';
 import 'package:project/shared/widgets/app_card.dart';
 import 'package:project/shared/widgets/section_header.dart';
 
+final RegExp _durationPattern = RegExp(
+  r'(\d{1,3})\s*(phut|phút|minute|minutes|mins|min|p)\b',
+  caseSensitive: false,
+);
+
 class AddTaskArguments {
   const AddTaskArguments({
     required this.scheduledDate,
@@ -48,7 +53,7 @@ class _AddFocusTaskScreenState extends State<AddFocusTaskScreen> {
   Map<int, List<bool>> _selectedOutputsPerDraft = const {};
   String? _returnRoute;
 
-  static const _presetFocusMinutes = [15, 25, 35, 45, 60, 90];
+  static const _presetFocusMinutes = [5, 15, 25, 35, 45, 60, 90];
   static const _customDurationValue = -1;
   static const _samplePrompts = [
     'Hoc TOEIC 45 phut, uu tien cao, hom nay, nhac toi luc 6 am',
@@ -153,6 +158,14 @@ class _AddFocusTaskScreenState extends State<AddFocusTaskScreen> {
             'Please describe the task in Vietnamese or English first.',
           ),
         ),
+      );
+      return;
+    }
+
+    final analysis = _promptAnalysis;
+    if (!analysis.canGenerateTask) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(analysis.blockingMessage)),
       );
       return;
     }
@@ -854,12 +867,9 @@ class _AiTaskDraft {
     final normalized = prompt.trim();
     final lower = _normalizeAiText(normalized);
 
-    final minutesMatch = RegExp(
-      r'(\d{1,3})\s*(phut|phÃºt|minute|minutes|min)',
-      caseSensitive: false,
-    ).firstMatch(lower);
+    final minutesMatch = _durationPattern.firstMatch(lower);
     final minutes =
-        int.tryParse(minutesMatch?.group(1) ?? '')?.clamp(15, 300) ?? 25;
+        int.tryParse(minutesMatch?.group(1) ?? '')?.clamp(1, 300) ?? 25;
 
     final priority = switch (true) {
       _
@@ -972,7 +982,7 @@ class _AiTaskDraft {
     var title = input
         .replaceAll(
           RegExp(
-            r'(\d{1,3})\s*(phut|minute|minutes|min)',
+            r'(\d{1,3})\s*(phut|phút|minute|minutes|mins|min|p)\b',
             caseSensitive: false,
           ),
           '',
@@ -1170,6 +1180,9 @@ class _AiTaskDraft {
     final lowerTitle = title.toLowerCase();
 
     if (lowerTitle.contains('toeic') || lowerTitle.contains('english')) {
+      if (minutes <= 15) {
+        return ['Review one key point', 'Finish one quick practice item'];
+      }
       if (minutes <= 25) {
         return ['Review key vocabulary', 'Finish one short practice set'];
       }
@@ -1183,6 +1196,9 @@ class _AiTaskDraft {
     if (lowerTitle.contains('code') ||
         lowerTitle.contains('flutter') ||
         lowerTitle.contains('bug')) {
+      if (minutes <= 15) {
+        return ['Identify one concrete issue', 'Complete one quick fix step'];
+      }
       if (minutes <= 25) {
         return ['Identify the main issue', 'Finish one small coding step'];
       }
@@ -1196,6 +1212,9 @@ class _AiTaskDraft {
     final cleanTitle = title.length > 24
         ? '${title.substring(0, 24)}...'
         : title;
+    if (minutes <= 15) {
+      return ['Prepare one quick step for $cleanTitle', 'Finish one small result'];
+    }
     if (minutes <= 25) {
       return ['Prepare for $cleanTitle', 'Finish one clear outcome'];
     }
@@ -1209,12 +1228,14 @@ class _AiTaskDraft {
 
 class _AiPromptAnalysis {
   const _AiPromptAnalysis({
+    required this.hasTaskIntent,
     required this.hasDuration,
     required this.hasDate,
     required this.hasReminderKeyword,
     required this.hasReminderTime,
   });
 
+  final bool hasTaskIntent;
   final bool hasDuration;
   final bool hasDate;
   final bool hasReminderKeyword;
@@ -1222,8 +1243,28 @@ class _AiPromptAnalysis {
 
   bool get isTooVague => !hasDuration && !hasDate && !hasReminderKeyword;
 
+  bool get canGenerateTask => hasTaskIntent && hasDuration;
+
+  String get blockingMessage {
+    if (!hasTaskIntent && !hasDuration) {
+      return 'AI cannot create this task yet. Please describe the task clearly and add a focus duration like 25 min or 5p.';
+    }
+    if (!hasTaskIntent) {
+      return 'AI cannot understand the task content yet. Please describe what you want to do more clearly.';
+    }
+    if (!hasDuration) {
+      return 'AI needs a clear focus duration before generating options. Example: 25 min, 45 minutes, or 5p.';
+    }
+    return 'AI cannot generate task options from this prompt yet.';
+  }
+
   List<String> get missingHints {
     final hints = <String>[];
+    if (!hasTaskIntent) {
+      hints.add(
+        'Add a clearer task action, for example: learn English, fix Flutter bug, review vocabulary.',
+      );
+    }
     if (!hasDuration) {
       hints.add('Add duration, for example: 30 minutes / 45 phut.');
     }
@@ -1238,9 +1279,13 @@ class _AiPromptAnalysis {
 
   static _AiPromptAnalysis fromPrompt(String prompt) {
     final lower = _AiTaskDraft._normalizeAiText(prompt);
+    final extractedTitle =
+        _AiTaskDraft._extractTitle(prompt).trim().toLowerCase();
     return _AiPromptAnalysis(
+      hasTaskIntent:
+          extractedTitle.isNotEmpty && extractedTitle != 'new focus task',
       hasDuration: RegExp(
-        r'(\d{1,3})\s*(minute|minutes|min|phut)',
+        r'(\d{1,3})\s*(minute|minutes|mins|min|phut|phút|p)\b',
         caseSensitive: false,
       ).hasMatch(lower),
       hasDate: RegExp(
