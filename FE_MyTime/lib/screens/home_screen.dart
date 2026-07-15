@@ -5,6 +5,8 @@ import 'package:project/core/routes/app_routes.dart';
 import 'package:project/core/theme/app_theme.dart';
 import 'package:project/models/focus_task.dart';
 import 'package:project/services/my_time_store.dart';
+import 'package:project/services/profile_api_service.dart';
+import 'package:project/services/session_store.dart';
 import 'package:project/shared/widgets/app_bottom_navigation.dart';
 import 'package:project/shared/widgets/app_card.dart';
 
@@ -24,10 +26,23 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     unawaited(MyTimeStore.instance.loadTasksFromApi());
     unawaited(MyTimeStore.instance.loadSessionsFromApi());
+    unawaited(_loadProfile());
     _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (!mounted) return;
       setState(() => _now = DateTime.now());
     });
+  }
+
+  Future<void> _loadProfile() async {
+    final token = SessionStore.instance.token;
+    if (token == null || token.isEmpty) return;
+
+    try {
+      final profile = await ProfileApiService.instance.getMe(token);
+      MyTimeStore.instance.updateProfile(profile);
+    } catch (_) {
+      // Keep existing local profile fallback on home if remote profile fails.
+    }
   }
 
   @override
@@ -72,12 +87,18 @@ class _HomeScreenState extends State<HomeScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 116),
             children: [
-              _HomeGreeting(now: _now, todayTaskCount: todayTasks.length),
+              _HomeGreeting(
+                now: _now,
+                todayTaskCount: todayTasks.length,
+                fullName: store.profile.fullName,
+              ),
               const SizedBox(height: 18),
               _TodayProgressCard(
-                totalFocusTime: _formatMinutes(store.totalBackendFocusSeconds),
-                sessions: store.focusSessions.length,
-                completedTasks: store.completedTaskCount,
+                totalFocusTime: _formatMinutes(
+                  store.totalBackendFocusSecondsForDate(_now),
+                ),
+                sessions: store.focusSessionsForDate(_now).length,
+                completedTasks: store.completedTaskCountForDate(_now),
                 totalTasks: todayTasks.length,
               ),
               const SizedBox(height: 24),
@@ -319,10 +340,15 @@ class _DrawerTile extends StatelessWidget {
 }
 
 class _HomeGreeting extends StatelessWidget {
-  const _HomeGreeting({required this.now, required this.todayTaskCount});
+  const _HomeGreeting({
+    required this.now,
+    required this.todayTaskCount,
+    required this.fullName,
+  });
 
   final DateTime now;
   final int todayTaskCount;
+  final String fullName;
 
   @override
   Widget build(BuildContext context) {
@@ -330,6 +356,8 @@ class _HomeGreeting extends StatelessWidget {
     final scene = theme.extension<AppSceneTheme>()!;
     final dateText = _formatDashboardDate(now);
     final timeText = _formatDashboardTime(now);
+    final trimmedName = fullName.trim();
+    final greetingName = trimmedName.isEmpty ? 'Student' : trimmedName;
 
     return Row(
       children: [
@@ -337,7 +365,7 @@ class _HomeGreeting extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Hello, Student', style: theme.textTheme.headlineSmall),
+              Text('Hello, $greetingName', style: theme.textTheme.headlineSmall),
               const SizedBox(height: 4),
               Text(
                 "Let's make today productive!",

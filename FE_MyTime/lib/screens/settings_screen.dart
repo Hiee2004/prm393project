@@ -264,6 +264,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
+          const _SectionTitle('Focus Audio'),
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.library_music_rounded),
+                  title: const Text('Ambient audio library'),
+                  subtitle: const Text(
+                    'Open a dedicated page to assign one file for Rain, Cafe, White Noise, and Ocean.',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {
+                    Navigator.pushNamed(context, AppRoutes.focusAudioSettings);
+                  },
+                ),
+              ],
+            ),
+          ),
           const _SectionTitle('Notifications'),
           AppCard(
             padding: EdgeInsets.zero,

@@ -3,11 +3,19 @@ import 'package:project/core/routes/app_routes.dart';
 import 'package:project/core/theme/app_theme.dart';
 import 'package:project/services/focus_notification_service.dart';
 import 'package:project/services/my_time_store.dart';
+import 'package:project/services/session_store.dart';
 import 'package:project/shared/widgets/app_background.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FocusNotificationService.instance.initialize();
+  await SessionStore.instance.hydrateFromLocal();
+  await MyTimeStore.instance.hydrateThemeFromLocal();
+  if (SessionStore.instance.token?.isNotEmpty ?? false) {
+    await MyTimeStore.instance.hydrateSettingsFromBackend();
+  } else {
+    await FocusNotificationService.instance.configureTimeZone('Asia/Ho_Chi_Minh');
+  }
   runApp(const MyTimeApp());
 }
 

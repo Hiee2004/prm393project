@@ -50,6 +50,22 @@ class SmartTaskPlan {
       ),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'taskId': taskId,
+      'taskTitle': taskTitle,
+      'planMode': planMode,
+      'suggestedDifficulty': suggestedDifficulty,
+      'suggestedFocusMinutes': suggestedFocusMinutes,
+      'recommendedFocusMode': recommendedFocusMode,
+      'bestTimeOfDay': bestTimeOfDay,
+      'recommendation': recommendation,
+      'breakdown': breakdown.map((item) => item.toJson()).toList(),
+      'pomodoroPlan': pomodoroPlan.map((item) => item.toJson()).toList(),
+      'generatedAt': generatedAt.toIso8601String(),
+    };
+  }
 }
 
 class SmartTaskStep {
@@ -70,6 +86,14 @@ class SmartTaskStep {
       minutes: json['minutes'] as int? ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'order': order,
+      'title': title,
+      'minutes': minutes,
+    };
+  }
 }
 
 class SmartTaskPomodoroItem {
@@ -89,5 +113,13 @@ class SmartTaskPomodoroItem {
       minutes: json['minutes'] as int? ?? 0,
       isBreak: json['isBreak'] as bool? ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'label': label,
+      'minutes': minutes,
+      'isBreak': isBreak,
+    };
   }
 }

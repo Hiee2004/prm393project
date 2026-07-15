@@ -11,7 +11,14 @@ class SmartScheduledTask {
     required this.priorityScore,
     required this.aiScore,
     required this.isOverlapping,
-  });
+    this.segmentLabel,
+    this.isBreakSegment = false,
+    int? sourceScheduledTaskId,
+    this.segmentOffsetMinutes = 0,
+    this.isPrimarySegment = true,
+    this.planSessionCount = 1,
+    this.isFromAppliedPlan = false,
+  }) : sourceScheduledTaskId = sourceScheduledTaskId ?? id;
 
   final int id;
   final int taskId;
@@ -24,6 +31,13 @@ class SmartScheduledTask {
   final int priorityScore;
   final double aiScore;
   final bool isOverlapping;
+  final String? segmentLabel;
+  final bool isBreakSegment;
+  final int sourceScheduledTaskId;
+  final int segmentOffsetMinutes;
+  final bool isPrimarySegment;
+  final int planSessionCount;
+  final bool isFromAppliedPlan;
 
   Duration get duration => endTime.difference(startTime);
 
@@ -40,26 +54,54 @@ class SmartScheduledTask {
       priorityScore: json['priorityScore'] as int? ?? 0,
       aiScore: (json['aiScore'] as num?)?.toDouble() ?? 0,
       isOverlapping: json['isOverlapping'] as bool? ?? false,
+      segmentLabel: json['segmentLabel'] as String?,
+      isBreakSegment: json['isBreakSegment'] as bool? ?? false,
+      sourceScheduledTaskId: json['sourceScheduledTaskId'] as int?,
+      segmentOffsetMinutes: json['segmentOffsetMinutes'] as int? ?? 0,
+      isPrimarySegment: json['isPrimarySegment'] as bool? ?? true,
+      planSessionCount: json['planSessionCount'] as int? ?? 1,
+      isFromAppliedPlan: json['isFromAppliedPlan'] as bool? ?? false,
     );
   }
 
   SmartScheduledTask copyWith({
+    String? title,
     DateTime? startTime,
     DateTime? endTime,
+    int? sessionNumber,
+    int? estimatedMinutes,
+    int? difficulty,
+    int? priorityScore,
+    double? aiScore,
     bool? isOverlapping,
+    String? segmentLabel,
+    bool? isBreakSegment,
+    int? sourceScheduledTaskId,
+    int? segmentOffsetMinutes,
+    bool? isPrimarySegment,
+    int? planSessionCount,
+    bool? isFromAppliedPlan,
   }) {
     return SmartScheduledTask(
       id: id,
       taskId: taskId,
-      title: title,
+      title: title ?? this.title,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
-      sessionNumber: sessionNumber,
-      estimatedMinutes: estimatedMinutes,
-      difficulty: difficulty,
-      priorityScore: priorityScore,
-      aiScore: aiScore,
+      sessionNumber: sessionNumber ?? this.sessionNumber,
+      estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+      difficulty: difficulty ?? this.difficulty,
+      priorityScore: priorityScore ?? this.priorityScore,
+      aiScore: aiScore ?? this.aiScore,
       isOverlapping: isOverlapping ?? this.isOverlapping,
+      segmentLabel: segmentLabel ?? this.segmentLabel,
+      isBreakSegment: isBreakSegment ?? this.isBreakSegment,
+      sourceScheduledTaskId:
+          sourceScheduledTaskId ?? this.sourceScheduledTaskId,
+      segmentOffsetMinutes: segmentOffsetMinutes ?? this.segmentOffsetMinutes,
+      isPrimarySegment: isPrimarySegment ?? this.isPrimarySegment,
+      planSessionCount: planSessionCount ?? this.planSessionCount,
+      isFromAppliedPlan: isFromAppliedPlan ?? this.isFromAppliedPlan,
     );
   }
 }

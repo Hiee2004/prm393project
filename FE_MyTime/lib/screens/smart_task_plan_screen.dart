@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project/core/constants/app_colors.dart';
 import 'package:project/models/focus_task.dart';
 import 'package:project/models/smart_task_plan.dart';
+import 'package:project/services/applied_smart_plan_store.dart';
 import 'package:project/services/ai_service.dart';
 import 'package:project/services/my_time_store.dart';
 import 'package:project/services/session_store.dart';
@@ -87,11 +88,16 @@ class _SmartTaskPlanScreenState extends State<SmartTaskPlanScreen> {
 
     setState(() => _applying = true);
     try {
+      await AppliedSmartPlanStore.instance.saveOriginalTask(
+        taskId: task.id,
+        task: task,
+      );
       final updatedTask = await AiService.instance.applySmartTaskPlan(
         token: token,
         taskId: task.id,
         plan: plan,
       );
+      await AppliedSmartPlanStore.instance.savePlan(taskId: task.id, plan: plan);
       MyTimeStore.instance.upsertTaskFromApi(updatedTask);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -13,6 +13,8 @@ import 'package:project/shared/widgets/app_card.dart';
 
 enum CalendarViewType { day, week, month }
 
+const int _calendarTasksPerPage = 10;
+
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
 
@@ -333,26 +335,17 @@ class _MonthCalendarCard extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 340;
+          final titleFontSize = isCompact ? 18.0 : 20.0;
 
           return Column(
             children: [
-              if (isCompact) ...[
-                _MonthSwitcherButton(
-                  tooltip: 'Previous month',
-                  onPressed: onPreviousMonth,
-                  icon: Icons.chevron_left_rounded,
-                ),
-                const SizedBox(height: 8),
-              ],
               Row(
                 children: [
-                  if (!isCompact)
-                    _MonthSwitcherButton(
-                      tooltip: 'Previous month',
-                      onPressed: onPreviousMonth,
-                      icon: Icons.chevron_left_rounded,
-                    ),
-                  if (!isCompact) const SizedBox(width: 4),
+                  _MonthSwitcherButton(
+                    tooltip: 'Previous month',
+                    onPressed: onPreviousMonth,
+                    icon: Icons.chevron_left_rounded,
+                  ),
                   Expanded(
                     child: Column(
                       children: [
@@ -361,8 +354,8 @@ class _MonthCalendarCard extends StatelessWidget {
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 20,
+                          style: TextStyle(
+                            fontSize: titleFontSize,
                             fontWeight: FontWeight.w900,
                             color: AppColors.textPrimary,
                           ),
@@ -381,7 +374,6 @@ class _MonthCalendarCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (!isCompact) const SizedBox(width: 4),
                   _MonthSwitcherButton(
                     tooltip: 'Next month',
                     onPressed: onNextMonth,
@@ -842,17 +834,16 @@ class _DayAgenda extends StatelessWidget {
       );
     }
 
-    return Column(
-      children: tasks
-          .map(
-            (task) => _TaskTile(
-              task: task,
-              onTap: () => onOpenTask(task),
-              onEdit: () => onEditTask(task),
-              onDelete: () => onDeleteTask(task),
-            ),
-          )
-          .toList(),
+    return _PaginatedCalendarTasks(
+      tasks: tasks,
+      tasksPerPage: _calendarTasksPerPage,
+      summaryLabel: '${tasks.length} task(s) on ${_formatShortDateWithYear(date)}',
+      itemBuilder: (task) => _TaskTile(
+        task: task,
+        onTap: () => onOpenTask(task),
+        onEdit: () => onEditTask(task),
+        onDelete: () => onDeleteTask(task),
+      ),
     );
   }
 }
@@ -1031,8 +1022,12 @@ class _DayGroupCard extends StatelessWidget {
             ),
             if (tasks.isNotEmpty) ...[
               const SizedBox(height: 12),
-              ...tasks.map(
-                (task) => _CompactTaskTile(
+              _PaginatedCalendarTasks(
+                tasks: tasks,
+                tasksPerPage: _calendarTasksPerPage,
+                dense: true,
+                summaryLabel: '${tasks.length} task(s) planned',
+                itemBuilder: (task) => _CompactTaskTile(
                   task: task,
                   onTap: () => onOpenTask(task),
                   onEdit: () => onEditTask(task),
@@ -1098,6 +1093,125 @@ class _TaskTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PaginatedCalendarTasks extends StatefulWidget {
+  const _PaginatedCalendarTasks({
+    required this.tasks,
+    required this.tasksPerPage,
+    required this.itemBuilder,
+    required this.summaryLabel,
+    this.dense = false,
+  });
+
+  final List<FocusTask> tasks;
+  final int tasksPerPage;
+  final Widget Function(FocusTask task) itemBuilder;
+  final String summaryLabel;
+  final bool dense;
+
+  @override
+  State<_PaginatedCalendarTasks> createState() => _PaginatedCalendarTasksState();
+}
+
+class _PaginatedCalendarTasksState extends State<_PaginatedCalendarTasks> {
+  int _pageIndex = 0;
+
+  @override
+  void didUpdateWidget(covariant _PaginatedCalendarTasks oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final maxPage = _pageCount - 1;
+    if (_pageIndex > maxPage) {
+      _pageIndex = maxPage < 0 ? 0 : maxPage;
+    }
+  }
+
+  int get _pageCount =>
+      (widget.tasks.length / widget.tasksPerPage).ceil().clamp(1, 9999);
+
+  List<FocusTask> get _visibleTasks {
+    final start = _pageIndex * widget.tasksPerPage;
+    final end = (start + widget.tasksPerPage).clamp(0, widget.tasks.length);
+    return widget.tasks.sublist(start, end);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_pageCount > 1)
+          Padding(
+            padding: EdgeInsets.only(bottom: widget.dense ? 8 : 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.summaryLabel,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                _CalendarInlinePager(
+                  currentPage: _pageIndex + 1,
+                  totalPages: _pageCount,
+                  onPrevious: _pageIndex == 0
+                      ? null
+                      : () => setState(() => _pageIndex--),
+                  onNext: _pageIndex >= _pageCount - 1
+                      ? null
+                      : () => setState(() => _pageIndex++),
+                ),
+              ],
+            ),
+          ),
+        ..._visibleTasks.map(widget.itemBuilder),
+      ],
+    );
+  }
+}
+
+class _CalendarInlinePager extends StatelessWidget {
+  const _CalendarInlinePager({
+    required this.currentPage,
+    required this.totalPages,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final int currentPage;
+  final int totalPages;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Previous page',
+          visualDensity: VisualDensity.compact,
+          onPressed: onPrevious,
+          icon: const Icon(Icons.chevron_left_rounded),
+        ),
+        Text(
+          '$currentPage/$totalPages',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        IconButton(
+          tooltip: 'Next page',
+          visualDensity: VisualDensity.compact,
+          onPressed: onNext,
+          icon: const Icon(Icons.chevron_right_rounded),
+        ),
+      ],
     );
   }
 }

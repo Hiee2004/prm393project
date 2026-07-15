@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:audioplayers/audioplayers.dart';
 
 class FocusAudioService {
@@ -8,7 +10,7 @@ class FocusAudioService {
   final AudioPlayer _ambientPlayer = AudioPlayer();
   final AudioPlayer _cuePlayer = AudioPlayer();
 
-  String? _currentAmbientAsset;
+  String? _currentAmbientSourceKey;
 
   Future<void> _preparePlayers() async {
     await _ambientPlayer.setAudioContext(
@@ -37,21 +39,40 @@ class FocusAudioService {
     );
   }
 
-  Future<void> playAmbient(String assetPath) async {
-    if (_currentAmbientAsset == assetPath &&
+  Future<void> playAmbientAsset(String assetPath) async {
+    if (_currentAmbientSourceKey == 'asset:$assetPath' &&
         _ambientPlayer.state == PlayerState.playing) {
       return;
     }
 
     await _preparePlayers();
-    _currentAmbientAsset = assetPath;
+    _currentAmbientSourceKey = 'asset:$assetPath';
     await _ambientPlayer.stop();
     await _ambientPlayer.setVolume(0.65);
     await _ambientPlayer.play(AssetSource(assetPath));
   }
 
+  Future<void> playAmbientFile(String filePath) async {
+    if (_currentAmbientSourceKey == 'file:$filePath' &&
+        _ambientPlayer.state == PlayerState.playing) {
+      return;
+    }
+
+    final file = File(filePath);
+    if (!await file.exists()) {
+      _currentAmbientSourceKey = null;
+      throw Exception('Custom audio file was not found on this device.');
+    }
+
+    await _preparePlayers();
+    _currentAmbientSourceKey = 'file:$filePath';
+    await _ambientPlayer.stop();
+    await _ambientPlayer.setVolume(0.65);
+    await _ambientPlayer.play(DeviceFileSource(filePath));
+  }
+
   Future<void> stopAmbient() async {
-    _currentAmbientAsset = null;
+    _currentAmbientSourceKey = null;
     await _ambientPlayer.stop();
   }
 

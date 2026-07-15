@@ -40,6 +40,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final profile = await ProfileApiService.instance.getMe(token);
       MyTimeStore.instance.updateProfile(profile);
+      await MyTimeStore.instance.loadSessionsFromApi();
+      await MyTimeStore.instance.loadTasksFromApi();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -110,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _StatCard(
-                        value: '${store.sessions.length}',
+                        value: '${store.focusSessions.length}',
                         label: 'Focus Sessions',
                         icon: Icons.hourglass_bottom_rounded,
                       ),
@@ -119,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 18),
                 _FocusSummaryCard(
-                  totalFocus: _formatMinutes(store.totalFocusSeconds),
+                  totalFocus: _formatMinutes(store.totalBackendFocusSeconds),
                   tasksDone: store.completedTaskCount,
                   totalTasks: store.tasks.length,
                   themeMode: profile.themeMode,

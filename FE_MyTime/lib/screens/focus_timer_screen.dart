@@ -5,9 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:project/core/constants/app_colors.dart';
 import 'package:project/core/routes/app_routes.dart';
+import 'package:project/models/custom_focus_audio.dart';
 import 'package:project/models/focus_task.dart';
 import 'package:project/services/focus_notification_service.dart';
 import 'package:project/services/focus_audio_service.dart';
+import 'package:project/services/applied_smart_plan_store.dart';
+import 'package:project/services/focus_audio_library_store.dart';
+import 'package:project/services/focus_timer_draft_store.dart';
 import 'package:project/services/my_time_store.dart';
 import 'package:project/shared/widgets/app_bottom_navigation.dart';
 import 'package:project/shared/widgets/app_card.dart';
@@ -23,7 +27,7 @@ class FocusTimerScreen extends StatefulWidget {
 }
 
 class _FocusTimerScreenState extends State<FocusTimerScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const _focusTemplates = [
     _FocusTemplate(
       id: 'pomodoro',
@@ -59,7 +63,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     ),
   ];
 
-  static const _soundProfiles = [
+  static const _builtInSoundProfiles = [
     _FocusSoundProfile(
       id: 'off',
       label: 'Silent',
@@ -107,17 +111,25 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   late final AnimationController _hourglassController;
   late int _totalSeconds;
   late int _remainingSeconds;
+  List<_FocusSegment> _segments = const [];
+  List<int> _segmentRemainingSeconds = const [];
+  int _currentSegmentIndex = 0;
+  int _completedFocusSeconds = 0;
   final Set<int> _completedIndexes = {};
   int _distractions = 0;
   bool _isRunning = false;
   bool _focusLockEnabled = false;
   DateTime? _startedAt;
   _FocusTemplate? _selectedTemplate;
-  _FocusSoundProfile _selectedSound = _soundProfiles[1];
+  List<_FocusSoundProfile> _availableSoundProfiles = List<_FocusSoundProfile>.from(
+    _builtInSoundProfiles,
+  );
+  _FocusSoundProfile _selectedSound = _builtInSoundProfiles[1];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _hourglassController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -125,9 +137,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     _notificationActionSubscription = FocusNotificationService.instance.actions
         .listen(_handleNotificationAction);
     _task = MyTimeStore.instance.selectedTask;
-    _totalSeconds = (_task?.focusMinutes ?? 25) * 60;
-    _remainingSeconds = _totalSeconds;
+    _configureDefaultPlan(_task);
     _selectedTemplate = _templateForMinutes(_task?.focusMinutes ?? 25);
+    unawaited(_initializeFocusTimer());
 
     final outputs = _task?.outputs ?? [];
     for (var index = 0; index < outputs.length; index++) {
@@ -137,8 +149,15 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     }
   }
 
+  Future<void> _initializeFocusTimer() async {
+    await _loadSoundProfiles();
+    await _restoreTimerDraftOrLoadPlan();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_persistTimerDraft());
     _timer?.cancel();
     _notificationActionSubscription?.cancel();
     _hourglassController.dispose();
@@ -148,19 +167,24 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _pauseAndPersistForExit();
+    }
+  }
+
   void _selectTask(FocusTask? task) {
     if (task == null || identical(task, _task)) return;
 
-    _timer?.cancel();
-    _hourglassController.stop();
-    _hourglassController.value = 0;
-    unawaited(FocusNotificationService.instance.cancel());
+    _pauseAndPersistForExit();
     MyTimeStore.instance.selectTask(task);
     setState(() {
       _startedAt = null;
       _task = task;
-      _totalSeconds = task.focusMinutes * 60;
-      _remainingSeconds = _totalSeconds;
+      _configureDefaultPlan(task);
       _selectedTemplate = _templateForMinutes(task.focusMinutes);
       _completedIndexes
         ..clear()
@@ -171,31 +195,331 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
       _distractions = 0;
       _isRunning = false;
     });
+    unawaited(_loadAppliedPlanForTask(task));
   }
 
-  void _changeFocusDuration(int minutes) {
-    if (_isRunning) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pause the timer before changing focus duration.'),
-        ),
-      );
+  void _configureDefaultPlan(FocusTask? task) {
+    final focusMinutes = task?.focusMinutes ?? 25;
+    _segments = [
+      _FocusSegment(
+        label: 'Focus session',
+        minutes: focusMinutes,
+        isBreak: false,
+      ),
+    ];
+    _segmentRemainingSeconds = [focusMinutes * 60];
+    _currentSegmentIndex = 0;
+    _completedFocusSeconds = 0;
+    _totalSeconds = focusMinutes * 60;
+    _remainingSeconds = _totalSeconds;
+  }
+
+  Future<void> _loadAppliedPlanForTask(FocusTask? task) async {
+    if (task == null) return;
+
+    final plan = await AppliedSmartPlanStore.instance.getPlan(task.id);
+    if (!mounted || _task?.id != task.id || plan == null || plan.pomodoroPlan.isEmpty) {
       return;
     }
 
-    final safeMinutes = minutes.clamp(1, 300);
-    _timer?.cancel();
-    _hourglassController.stop();
-    _hourglassController.value = 0;
-    unawaited(FocusNotificationService.instance.cancel());
+    final segments = plan.pomodoroPlan
+        .where((item) => item.minutes > 0)
+        .map(
+          (item) => _FocusSegment(
+            label: item.label,
+            minutes: item.minutes,
+            isBreak: item.isBreak,
+          ),
+        )
+        .toList();
+    if (segments.isEmpty) return;
+
+    final firstSegmentSeconds = segments.first.minutes * 60;
+    final totalFocusSeconds = segments
+        .where((segment) => !segment.isBreak)
+        .fold<int>(0, (total, segment) => total + segment.minutes * 60);
 
     setState(() {
-      _startedAt = null;
-      _totalSeconds = safeMinutes * 60;
-      _remainingSeconds = _totalSeconds;
-      _isRunning = false;
-      _selectedTemplate = _templateForMinutes(safeMinutes);
+      _segments = segments;
+      _segmentRemainingSeconds = [
+        for (final segment in segments) segment.minutes * 60,
+      ];
+      _currentSegmentIndex = 0;
+      _completedFocusSeconds = 0;
+      _totalSeconds = totalFocusSeconds;
+      _remainingSeconds = firstSegmentSeconds;
+      _selectedTemplate = null;
     });
+    unawaited(_persistTimerDraft());
+  }
+
+  _FocusSegment get _currentSegment => _segments[_currentSegmentIndex];
+
+  Future<void> _loadSoundProfiles() async {
+    final customAudios = await FocusAudioLibraryStore.instance.getAudios();
+    if (!mounted) return;
+
+    final profiles = _builtInSoundProfiles.map((profile) {
+      CustomFocusAudio? customAudio;
+      for (final item in customAudios) {
+        if (item.id == profile.id) {
+          customAudio = item;
+          break;
+        }
+      }
+      return _profileWithCustomOverride(profile, customAudio);
+    }).toList();
+    final selectedMatch = profiles.where((profile) => profile.id == _selectedSound.id);
+
+    setState(() {
+      _availableSoundProfiles = profiles;
+      if (selectedMatch.isNotEmpty) {
+        _selectedSound = selectedMatch.first;
+      } else {
+        _selectedSound = _builtInSoundProfiles[1];
+      }
+    });
+  }
+
+  _FocusSoundProfile _profileWithCustomOverride(
+    _FocusSoundProfile profile,
+    CustomFocusAudio? audio,
+  ) {
+    if (audio == null || audio.filePath.trim().isEmpty) {
+      return profile;
+    }
+
+    return _FocusSoundProfile(
+      id: profile.id,
+      label: profile.label,
+      icon: profile.icon,
+      description: 'Custom audio: ${audio.label}',
+      accent: profile.accent,
+      filePath: audio.filePath,
+    );
+  }
+
+  Future<void> _restoreTimerDraftOrLoadPlan() async {
+    final restored = await _restoreTimerDraft();
+    if (!restored) {
+      await _loadAppliedPlanForTask(_task);
+    }
+  }
+
+  Future<bool> _restoreTimerDraft() async {
+    final draft = await FocusTimerDraftStore.instance.getDraft();
+    if (draft == null) return false;
+
+    final taskId = draft['taskId']?.toString();
+    if (taskId == null || taskId.isEmpty) {
+      await FocusTimerDraftStore.instance.clear();
+      return false;
+    }
+
+    final resolvedTask = _resolveTaskById(taskId);
+    if (resolvedTask == null) {
+      await FocusTimerDraftStore.instance.clear();
+      return false;
+    }
+
+    final segments = ((draft['segments'] as List?) ?? const [])
+        .whereType<Map>()
+        .map(
+          (segment) => _FocusSegment(
+            label: segment['label']?.toString() ?? 'Focus session',
+            minutes: (segment['minutes'] as num?)?.toInt() ?? 1,
+            isBreak: segment['isBreak'] == true,
+          ),
+        )
+        .where((segment) => segment.minutes > 0)
+        .toList();
+    if (segments.isEmpty) {
+      await FocusTimerDraftStore.instance.clear();
+      return false;
+    }
+
+    final restoredSegmentIndex = (((draft['currentSegmentIndex'] as num?)
+                    ?.toInt() ??
+                0)
+            .clamp(0, segments.length - 1))
+        .toInt();
+    final restoredCurrentSegment = segments[restoredSegmentIndex];
+    final totalFocusSeconds = segments
+        .where((segment) => !segment.isBreak)
+        .fold<int>(0, (total, segment) => total + segment.minutes * 60);
+    final remainingSeconds = ((draft['remainingSeconds'] as num?)?.toInt() ??
+            restoredCurrentSegment.minutes * 60)
+        .clamp(0, math.max(restoredCurrentSegment.minutes * 60, 0))
+        .toInt();
+    final storedTotalSeconds =
+        ((draft['totalSeconds'] as num?)?.toInt() ?? totalFocusSeconds)
+            .clamp(0, totalFocusSeconds)
+            .toInt();
+    final completedFocusSeconds =
+        ((draft['completedFocusSeconds'] as num?)?.toInt() ?? 0)
+            .clamp(0, storedTotalSeconds)
+            .toInt();
+    final restoredRemainingBySegment =
+        ((draft['segmentRemainingSeconds'] as List?) ?? const [])
+            .map((value) => (value as num?)?.toInt())
+            .whereType<int>()
+            .toList();
+    final normalizedRemainingBySegment = List<int>.generate(segments.length, (
+      index,
+    ) {
+      final maxSeconds = math.max(segments[index].minutes * 60, 0);
+      final restoredValue = index < restoredRemainingBySegment.length
+          ? restoredRemainingBySegment[index]
+          : null;
+      if (restoredValue == null) {
+        if (index == restoredSegmentIndex) {
+          return remainingSeconds.clamp(0, maxSeconds).toInt();
+        }
+        return maxSeconds;
+      }
+      return restoredValue.clamp(0, maxSeconds).toInt();
+    });
+    final selectedTemplateId = draft['selectedTemplateId']?.toString();
+    final selectedSoundId = draft['selectedSoundId']?.toString();
+    final startedAtText = draft['startedAt']?.toString();
+    final restoredStartedAt = startedAtText == null || startedAtText.isEmpty
+        ? null
+        : DateTime.tryParse(startedAtText);
+
+    final completedIndexes = ((draft['completedIndexes'] as List?) ?? const [])
+        .map((index) => (index as num?)?.toInt())
+        .whereType<int>()
+        .toSet();
+
+    final restoredTemplate = _focusTemplates.cast<_FocusTemplate?>().firstWhere(
+          (template) => template?.id == selectedTemplateId,
+          orElse: () => null,
+        );
+    _FocusSoundProfile? restoredSound;
+    for (final profile in _availableSoundProfiles) {
+      if (profile.id == selectedSoundId) {
+        restoredSound = profile;
+        break;
+      }
+    }
+
+    if (!mounted) return true;
+
+    setState(() {
+      _task = resolvedTask;
+      _segments = segments;
+      _segmentRemainingSeconds = normalizedRemainingBySegment;
+      _currentSegmentIndex = restoredSegmentIndex;
+      _completedFocusSeconds = completedFocusSeconds;
+      _totalSeconds = storedTotalSeconds;
+      _remainingSeconds = normalizedRemainingBySegment[restoredSegmentIndex];
+      _selectedTemplate = restoredTemplate;
+      _selectedSound = restoredSound ?? _selectedSound;
+      _startedAt = restoredStartedAt;
+      _distractions = (draft['distractions'] as num?)?.toInt() ?? 0;
+      _focusLockEnabled = draft['focusLockEnabled'] == true;
+      _isRunning = false;
+      _completedIndexes
+        ..clear()
+        ..addAll(completedIndexes);
+    });
+
+    MyTimeStore.instance.selectTask(resolvedTask);
+    return true;
+  }
+
+  FocusTask? _resolveTaskById(String taskId) {
+    for (final task in MyTimeStore.instance.tasks) {
+      if (task.id == taskId) return task;
+    }
+
+    final selectedTask = MyTimeStore.instance.selectedTask;
+    if (selectedTask?.id == taskId) return selectedTask;
+    return null;
+  }
+
+  bool get _hasRestorableProgress {
+    final initialRemainingSeconds = _segments.isEmpty ? 0 : _segments.first.minutes * 60;
+    final hasSegmentProgress = _segments.isNotEmpty &&
+        _segmentRemainingSeconds.length == _segments.length &&
+        _segmentRemainingSeconds.asMap().entries.any(
+          (entry) => entry.value != _segments[entry.key].minutes * 60,
+        );
+    return _startedAt != null ||
+        _currentSegmentIndex > 0 ||
+        hasSegmentProgress ||
+        _completedFocusSeconds > 0 ||
+        _remainingSeconds != initialRemainingSeconds ||
+        _selectedTemplate != null ||
+        _segments.length > 1 ||
+        _completedIndexes.isNotEmpty ||
+        _distractions > 0;
+  }
+
+  Future<void> _persistTimerDraft() async {
+    final task = _task;
+    if (task == null || _segments.isEmpty || !_hasRestorableProgress) {
+      await FocusTimerDraftStore.instance.clear();
+      return;
+    }
+
+    await FocusTimerDraftStore.instance.saveDraft({
+      'taskId': task.id,
+      'segments': [
+        for (final segment in _segments)
+          {
+            'label': segment.label,
+            'minutes': segment.minutes,
+            'isBreak': segment.isBreak,
+          },
+      ],
+      'currentSegmentIndex': _currentSegmentIndex,
+      'remainingSeconds': _remainingSeconds,
+      'segmentRemainingSeconds': _segmentRemainingSeconds,
+      'totalSeconds': _totalSeconds,
+      'completedFocusSeconds': _completedFocusSeconds,
+      'completedIndexes': _completedIndexes.toList()..sort(),
+      'distractions': _distractions,
+      'focusLockEnabled': _focusLockEnabled,
+      'selectedTemplateId': _selectedTemplate?.id,
+      'selectedSoundId': _selectedSound.id,
+      'startedAt': _startedAt?.toIso8601String(),
+    });
+  }
+
+  void _pauseAndPersistForExit() {
+    if (_isRunning) {
+      _timer?.cancel();
+      _hourglassController.stop();
+      setState(() => _isRunning = false);
+      unawaited(FocusAudioService.instance.stopAmbient());
+      unawaited(_applyFocusMode(lockActive: false));
+      unawaited(_showPausedNotification());
+    }
+
+    unawaited(_persistTimerDraft());
+  }
+
+  List<_FocusSegment> _buildTemplateSegments(_FocusTemplate template) {
+    final segments = <_FocusSegment>[
+      _FocusSegment(
+        label: template.label,
+        minutes: math.max(template.focusMinutes, 1),
+        isBreak: false,
+      ),
+    ];
+
+    if (template.breakMinutes > 0) {
+      segments.add(
+        _FocusSegment(
+          label: 'Break',
+          minutes: template.breakMinutes,
+          isBreak: true,
+        ),
+      );
+    }
+
+    return segments;
   }
 
   void _selectTemplate(_FocusTemplate template) {
@@ -213,24 +537,38 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     _hourglassController.value = 0;
     unawaited(FocusNotificationService.instance.cancel());
 
+    final segments = _buildTemplateSegments(template);
+    final totalFocusSeconds = segments
+        .where((segment) => !segment.isBreak)
+        .fold<int>(0, (total, segment) => total + segment.minutes * 60);
+
     setState(() {
+      _segments = segments;
+      _segmentRemainingSeconds = [
+        for (final segment in segments) segment.minutes * 60,
+      ];
+      _currentSegmentIndex = 0;
+      _completedFocusSeconds = 0;
       _selectedTemplate = template;
       _startedAt = null;
-      _totalSeconds = template.focusMinutes * 60;
-      _remainingSeconds = _totalSeconds;
+      _totalSeconds = totalFocusSeconds;
+      _remainingSeconds = _currentSegment.minutes * 60;
       _isRunning = false;
     });
+    unawaited(_persistTimerDraft());
   }
 
   void _toggleFocusLock(bool value) {
     setState(() => _focusLockEnabled = value);
     unawaited(_applyFocusMode(lockActive: value && _isRunning));
+    unawaited(_persistTimerDraft());
   }
 
   void _selectSound(_FocusSoundProfile profile) {
     setState(() => _selectedSound = profile);
     SystemSound.play(SystemSoundType.click);
     unawaited(_syncAmbientAudio());
+    unawaited(_persistTimerDraft());
   }
 
   void _toggleTimer() {
@@ -271,6 +609,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     unawaited(FocusAudioService.instance.stopAmbient());
     unawaited(_applyFocusMode(lockActive: false));
     unawaited(_showPausedNotification());
+    unawaited(_persistTimerDraft());
   }
 
   void _resumeTimer() {
@@ -283,10 +622,34 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     _hourglassController.repeat();
     unawaited(_syncAmbientAudio());
     unawaited(_showRunningNotification());
+    _startTicker();
+    unawaited(_persistTimerDraft());
+  }
+
+  void _startTicker() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds <= 1) {
         timer.cancel();
         _hourglassController.stop();
+        _segmentRemainingSeconds[_currentSegmentIndex] = 0;
+
+        if (_currentSegmentIndex < _segments.length - 1) {
+          final nextIndex = _currentSegmentIndex + 1;
+          final nextSegment = _segments[nextIndex];
+          setState(() {
+            _currentSegmentIndex = nextIndex;
+            _remainingSeconds = _segmentRemainingSeconds[nextIndex]
+                .clamp(0, nextSegment.minutes * 60)
+                .toInt();
+            _isRunning = true;
+          });
+          _hourglassController.repeat();
+          unawaited(_showRunningNotification());
+          unawaited(_persistTimerDraft());
+          return;
+        }
+
         setState(() {
           _remainingSeconds = 0;
           _isRunning = false;
@@ -299,11 +662,17 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
             taskTitle: _task?.title ?? 'Focus Time',
           ),
         );
+        unawaited(FocusTimerDraftStore.instance.clear());
         return;
       }
-      setState(() => _remainingSeconds--);
+
+      setState(() {
+        _remainingSeconds--;
+        _segmentRemainingSeconds[_currentSegmentIndex] = _remainingSeconds;
+      });
       if (_remainingSeconds % 60 == 0) {
         unawaited(_showRunningNotification());
+        unawaited(_persistTimerDraft());
       }
     });
   }
@@ -317,9 +686,40 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     unawaited(FocusAudioService.instance.stopAmbient());
     unawaited(_applyFocusMode(lockActive: false));
     setState(() {
-      _remainingSeconds = _totalSeconds;
+      _segmentRemainingSeconds = [
+        for (final segment in _segments) segment.minutes * 60,
+      ];
+      _currentSegmentIndex = 0;
+      _completedFocusSeconds = 0;
+      _remainingSeconds = _currentSegment.minutes * 60;
       _isRunning = false;
     });
+    unawaited(_persistTimerDraft());
+  }
+
+  void _jumpToSegment(int offset) {
+    if (_segments.length <= 1) return;
+
+    final targetIndex = _currentSegmentIndex + offset;
+    if (targetIndex < 0 || targetIndex >= _segments.length) return;
+
+    final targetSegment = _segments[targetIndex];
+    setState(() {
+      _segmentRemainingSeconds[_currentSegmentIndex] = _remainingSeconds;
+      _currentSegmentIndex = targetIndex;
+      _remainingSeconds = _segmentRemainingSeconds[targetIndex]
+          .clamp(0, targetSegment.minutes * 60)
+          .toInt();
+    });
+
+    if (_isRunning) {
+      _hourglassController.repeat();
+      unawaited(_showRunningNotification());
+    } else {
+      unawaited(_showPausedNotification());
+    }
+
+    unawaited(_persistTimerDraft());
   }
 
   Future<void> _finishSession() async {
@@ -332,7 +732,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     unawaited(FocusAudioService.instance.stopAmbient());
     unawaited(_applyFocusMode(lockActive: false));
 
-    final elapsedSeconds = _totalSeconds - _remainingSeconds;
+    final elapsedSeconds = _elapsedFocusSeconds;
     final token = SessionStore.instance.token;
 
     if (token != null && token.isNotEmpty) {
@@ -340,7 +740,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
         await FocusSessionApiService.instance.createSession(
           token: token,
           focusTaskId: task.id,
-          plannedSeconds: task.focusMinutes * 60,
+          plannedSeconds: _totalSeconds,
           actualFocusSeconds: elapsedSeconds,
           completedOutputs: _completedIndexes.length,
           totalOutputs: task.outputs.length,
@@ -357,10 +757,12 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     await MyTimeStore.instance.completeSession(
       task: task,
       elapsedSeconds: elapsedSeconds,
+      plannedMinutes: _focusMinutes,
       completedIndexes: _completedIndexes,
       distractions: _distractions,
       occurrenceDate: DateTime.now(),
     );
+    await FocusTimerDraftStore.instance.clear();
 
     if (!mounted) return;
 
@@ -381,9 +783,20 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   }
 
   Future<void> _showRunningNotification() {
-    return FocusNotificationService.instance.showRunning(
+    if (_currentSegment.isBreak) {
+      return FocusNotificationService.instance.showSegmentStarted(
+        taskTitle: _task?.title ?? 'Focus Time',
+        segmentLabel: _currentSegment.label,
+        remainingTime: _timeText,
+        isBreak: true,
+      );
+    }
+
+    return FocusNotificationService.instance.showSegmentStarted(
       taskTitle: _task?.title ?? 'Focus Time',
+      segmentLabel: _currentSegment.label,
       remainingTime: _timeText,
+      isBreak: false,
     );
   }
 
@@ -396,11 +809,22 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
 
   Future<void> _syncAmbientAudio() async {
     if (!_isRunning || _selectedSound.assetPath == null) {
-      await FocusAudioService.instance.stopAmbient();
+      if (_selectedSound.filePath == null) {
+        await FocusAudioService.instance.stopAmbient();
+        return;
+      }
+    }
+    if (_selectedSound.assetPath != null) {
+      await FocusAudioService.instance.playAmbientAsset(_selectedSound.assetPath!);
       return;
     }
 
-    await FocusAudioService.instance.playAmbient(_selectedSound.assetPath!);
+    if (_selectedSound.filePath != null) {
+      await FocusAudioService.instance.playAmbientFile(_selectedSound.filePath!);
+      return;
+    }
+
+    await FocusAudioService.instance.stopAmbient();
   }
 
   String get _timeText {
@@ -411,24 +835,57 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   }
 
   String get _clockStatus {
-    if (_isRunning) return 'FOCUSING';
-    if (_remainingSeconds == _totalSeconds) return 'READY';
+    if (_isRunning) {
+      return _currentSegment.isBreak ? 'BREAK' : 'FOCUSING';
+    }
+    if (_currentSegmentIndex == 0 &&
+        _remainingSeconds == _currentSegment.minutes * 60) {
+      return 'READY';
+    }
     return 'PAUSED';
   }
 
   int get _focusMinutes => (_totalSeconds / 60).round();
 
   String get _breakHint {
-    final template = _selectedTemplate;
-    if (template == null) return 'Custom session';
-    return 'Next break: ${template.breakMinutes} min';
+    if (_currentSegment.isBreak) {
+      return 'Break time: ${_currentSegment.minutes} min';
+    }
+
+    final nextBreakIndex = _segments.indexWhere(
+      (segment) => segment.isBreak && _segments.indexOf(segment) > _currentSegmentIndex,
+    );
+    if (nextBreakIndex != -1) {
+      return 'Next break: ${_segments[nextBreakIndex].minutes} min';
+    }
+
+    return _segments.length > 1 ? 'Final focus block' : 'Single focus session';
+  }
+
+  int get _elapsedFocusSeconds {
+    if (_segments.isEmpty || _segmentRemainingSeconds.length != _segments.length) {
+      return 0;
+    }
+
+    var total = 0;
+    for (var index = 0; index < _segments.length; index++) {
+      final segment = _segments[index];
+      if (segment.isBreak) continue;
+      final plannedSeconds = segment.minutes * 60;
+      final remainingSeconds = _segmentRemainingSeconds[index].clamp(
+        0,
+        plannedSeconds,
+      );
+      total += plannedSeconds - remainingSeconds;
+    }
+    return total.clamp(0, 86400);
   }
 
   bool get _lockEditing => _focusLockEnabled && _isRunning;
 
   double get _progress {
     if (_totalSeconds <= 0) return 0;
-    return 1 - (_remainingSeconds / _totalSeconds);
+    return (_elapsedFocusSeconds / _totalSeconds).clamp(0.0, 1.0);
   }
 
   @override
@@ -503,8 +960,10 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                       padding: const EdgeInsets.all(16),
                       children: [
                         _FocusModeDeck(
+                          focusMinutes: _focusMinutes,
                           selectedTemplate: _selectedTemplate,
                           selectedSound: _selectedSound,
+                          soundProfiles: _availableSoundProfiles,
                           focusLockEnabled: _focusLockEnabled,
                           isRunning: _isRunning,
                           breakHint: _breakHint,
@@ -522,7 +981,6 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                           minutes: _focusMinutes,
                           enabled: !_isRunning && !_lockEditing,
                           selectedTemplate: _selectedTemplate,
-                          onChanged: _changeFocusDuration,
                         ),
                         const SizedBox(height: 14),
                         if (!canStart)
@@ -541,6 +999,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                             return _FocusSessionCard(
                               title: task.title,
                               status: _clockStatus,
+                              segmentLabel: _currentSegment.label,
                               outputText:
                                   '${_completedIndexes.length}/${task.outputs.length} output',
                               time: _timeText,
@@ -548,7 +1007,14 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                               focusMinutes: _focusMinutes,
                               hourglassValue: _progress,
                               breakHint: _breakHint,
+                              segmentSummary:
+                                  '${_currentSegmentIndex + 1}/${_segments.length} segments',
                               soundProfile: _selectedSound,
+                              canGoPrevious: _currentSegmentIndex > 0,
+                              canGoNext:
+                                  _currentSegmentIndex < _segments.length - 1,
+                              onPreviousStep: () => _jumpToSegment(-1),
+                              onNextStep: () => _jumpToSegment(1),
                             );
                           },
                         ),
@@ -580,6 +1046,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                 _completedIndexes.remove(index);
                               }
                             });
+                            unawaited(_persistTimerDraft());
                           },
                         ),
                         const SizedBox(height: 8),
@@ -588,6 +1055,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                           focusLocked: _lockEditing,
                           onRecordDistraction: () {
                             setState(() => _distractions++);
+                            unawaited(_persistTimerDraft());
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Distraction recorded.'),
@@ -684,8 +1152,10 @@ class _FocusTaskPicker extends StatelessWidget {
 
 class _FocusModeDeck extends StatelessWidget {
   const _FocusModeDeck({
+    required this.focusMinutes,
     required this.selectedTemplate,
     required this.selectedSound,
+    required this.soundProfiles,
     required this.focusLockEnabled,
     required this.isRunning,
     required this.breakHint,
@@ -694,8 +1164,10 @@ class _FocusModeDeck extends StatelessWidget {
     required this.onFocusLockChanged,
   });
 
+  final int focusMinutes;
   final _FocusTemplate? selectedTemplate;
   final _FocusSoundProfile selectedSound;
+  final List<_FocusSoundProfile> soundProfiles;
   final bool focusLockEnabled;
   final bool isRunning;
   final String breakHint;
@@ -731,6 +1203,37 @@ class _FocusModeDeck extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
           ),
+          if (selectedTemplate == null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceSoft,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.edit_rounded,
+                    color: AppColors.primaryDark,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Current session: Custom $focusMinutes min',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           SizedBox(
             height: 110,
@@ -801,7 +1304,7 @@ class _FocusModeDeck extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _FocusTimerScreenState._soundProfiles.map((profile) {
+            children: soundProfiles.map((profile) {
               return ChoiceChip(
                 selected: profile.id == selectedSound.id,
                 label: Text(profile.label),
@@ -909,19 +1412,15 @@ class _FocusDurationPicker extends StatelessWidget {
     required this.minutes,
     required this.enabled,
     required this.selectedTemplate,
-    required this.onChanged,
   });
 
   final int minutes;
   final bool enabled;
   final _FocusTemplate? selectedTemplate;
-  final ValueChanged<int> onChanged;
-
-  static const _presetMinutes = [15, 25, 45, 60, 90];
 
   @override
   Widget build(BuildContext context) {
-    final isCustom = !_presetMinutes.contains(minutes);
+    final isCustom = selectedTemplate == null;
 
     return AppCard(
       padding: const EdgeInsets.all(14),
@@ -953,6 +1452,18 @@ class _FocusDurationPicker extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (selectedTemplate == null && isCustom)
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Text(
+                    'Custom',
+                    style: const TextStyle(
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
               if (!enabled)
                 const Text(
                   'Pause to edit',
@@ -963,81 +1474,9 @@ class _FocusDurationPicker extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final value in _presetMinutes)
-                ChoiceChip(
-                  label: Text('$value min'),
-                  selected: minutes == value,
-                  onSelected: enabled ? (_) => onChanged(value) : null,
-                ),
-              ChoiceChip(
-                label: Text(isCustom ? '$minutes min' : 'Custom'),
-                selected: isCustom,
-                avatar: const Icon(Icons.edit_rounded, size: 16),
-                onSelected: enabled
-                    ? (_) => _showCustomDurationDialog(context)
-                    : null,
-              ),
-            ],
-          ),
         ],
       ),
     );
-  }
-
-  Future<void> _showCustomDurationDialog(BuildContext context) async {
-    final controller = TextEditingController(text: minutes.toString());
-
-    final value = await showDialog<int>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Custom focus duration'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Minutes',
-              hintText: 'Example: 35',
-            ),
-            onSubmitted: (_) => _submitCustomDuration(context, controller),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => _submitCustomDuration(context, controller),
-              child: const Text('Apply'),
-            ),
-          ],
-        );
-      },
-    );
-
-    controller.dispose();
-    if (value != null) onChanged(value);
-  }
-
-  void _submitCustomDuration(
-    BuildContext context,
-    TextEditingController controller,
-  ) {
-    final minutes = int.tryParse(controller.text.trim());
-    if (minutes == null || minutes <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid minute value.')),
-      );
-      return;
-    }
-
-    Navigator.pop(context, minutes);
   }
 }
 
@@ -1079,6 +1518,7 @@ class _FocusSoundProfile {
     required this.description,
     required this.accent,
     this.assetPath,
+    this.filePath,
   });
 
   final String id;
@@ -1087,30 +1527,55 @@ class _FocusSoundProfile {
   final String description;
   final Color accent;
   final String? assetPath;
+  final String? filePath;
+}
+
+class _FocusSegment {
+  const _FocusSegment({
+    required this.label,
+    required this.minutes,
+    required this.isBreak,
+  });
+
+  final String label;
+  final int minutes;
+  final bool isBreak;
 }
 
 class _FocusSessionCard extends StatelessWidget {
   const _FocusSessionCard({
     required this.title,
     required this.status,
+    required this.segmentLabel,
     required this.outputText,
     required this.time,
     required this.progress,
     required this.focusMinutes,
     required this.hourglassValue,
     required this.breakHint,
+    required this.segmentSummary,
     required this.soundProfile,
+    required this.canGoPrevious,
+    required this.canGoNext,
+    required this.onPreviousStep,
+    required this.onNextStep,
   });
 
   final String title;
   final String status;
+  final String segmentLabel;
   final String outputText;
   final String time;
   final double progress;
   final int focusMinutes;
   final double hourglassValue;
   final String breakHint;
+  final String segmentSummary;
   final _FocusSoundProfile soundProfile;
+  final bool canGoPrevious;
+  final bool canGoNext;
+  final VoidCallback onPreviousStep;
+  final VoidCallback onNextStep;
 
   @override
   Widget build(BuildContext context) {
@@ -1175,6 +1640,32 @@ class _FocusSessionCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
+                          Text(
+                            '$segmentLabel • $segmentSummary',
+                            style: const TextStyle(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              _StepNavButton(
+                                tooltip: 'Previous step',
+                                icon: Icons.chevron_left_rounded,
+                                enabled: canGoPrevious,
+                                onTap: onPreviousStep,
+                              ),
+                              const SizedBox(width: 6),
+                              _StepNavButton(
+                                tooltip: 'Next step',
+                                icon: Icons.chevron_right_rounded,
+                                enabled: canGoNext,
+                                onTap: onNextStep,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
@@ -1273,6 +1764,50 @@ class _StatusChip extends StatelessWidget {
           color: isRunning ? Colors.white : AppColors.primary,
           fontWeight: FontWeight.w900,
           letterSpacing: 1.1,
+        ),
+      ),
+    );
+  }
+}
+
+class _StepNavButton extends StatelessWidget {
+  const _StepNavButton({
+    required this.tooltip,
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: enabled
+                ? Colors.white.withValues(alpha: 0.92)
+                : Colors.white.withValues(alpha: 0.48),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: enabled
+                  ? AppColors.primary.withValues(alpha: 0.28)
+                  : AppColors.border,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: enabled ? AppColors.primary : AppColors.textMuted,
+          ),
         ),
       ),
     );

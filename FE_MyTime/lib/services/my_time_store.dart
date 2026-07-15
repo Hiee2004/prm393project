@@ -5,15 +5,19 @@ import 'package:project/models/focus_task.dart';
 import 'package:project/models/user_profile.dart';
 import 'package:project/models/user_setting.dart';
 import 'package:project/services/focus_task_api_service.dart';
+import 'package:project/services/focus_notification_service.dart';
 import 'package:project/services/notification_api_service.dart';
 import 'package:project/services/settings_api_service.dart';
 import 'package:project/services/session_store.dart';
 import 'package:project/models/focus_session.dart';
 import 'package:project/services/focus_session_api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 class MyTimeStore extends ChangeNotifier {
   MyTimeStore._();
+
+  static const _themePreferenceKey = 'mytime_theme_mode';
 
   static final MyTimeStore instance = MyTimeStore._();
   final ValueNotifier<String> _themeModeNotifier = ValueNotifier<String>(
@@ -64,6 +68,23 @@ class MyTimeStore extends ChangeNotifier {
     );
   }
 
+  List<FocusSession> focusSessionsForDate(DateTime date) {
+    final targetDate = _dateOnly(date);
+    return _focusSessions.where((session) {
+      final sessionDate = _dateOnly(
+        (session.completedAt ?? session.startedAt).toLocal(),
+      );
+      return sessionDate == targetDate;
+    }).toList();
+  }
+
+  int totalBackendFocusSecondsForDate(DateTime date) {
+    return focusSessionsForDate(date).fold(
+      0,
+      (total, session) => total + session.actualFocusSeconds,
+    );
+  }
+
   int get totalBackendCompletedOutputs {
     return _focusSessions.fold(
       0,
@@ -80,6 +101,7 @@ class MyTimeStore extends ChangeNotifier {
     _tasks = tasks;
     _selectedTask = _firstPlannedTask;
 
+    unawaited(_refreshTaskReminders());
     notifyListeners();
   }
 
@@ -136,16 +158,32 @@ class MyTimeStore extends ChangeNotifier {
   UserSetting get setting => _setting;
   ValueListenable<String> get themeModeListenable => _themeModeNotifier;
 
+  Future<void> hydrateThemeFromLocal() async {
+    final preferences = await SharedPreferences.getInstance();
+    final storedTheme = preferences.getString(_themePreferenceKey);
+    if (storedTheme == null || storedTheme.trim().isEmpty) return;
+
+    final normalizedTheme = AppTheme.normalizeMode(storedTheme);
+    _themeModeNotifier.value = normalizedTheme;
+    _setting = _setting.copyWith(themeMode: normalizedTheme);
+    _profile = _profile.copyWith(themeMode: normalizedTheme);
+    notifyListeners();
+  }
+
   void updateSetting(UserSetting setting) {
-    final themeChanged = _setting.themeMode != setting.themeMode;
-    _setting = setting;
+    final normalizedTheme = AppTheme.normalizeMode(setting.themeMode);
+    final themeChanged = _setting.themeMode != normalizedTheme;
+    _setting = setting.copyWith(themeMode: normalizedTheme);
     _profile = _profile.copyWith(
       timeZone: setting.timeZone,
-      themeMode: setting.themeMode,
+      themeMode: normalizedTheme,
     );
     if (themeChanged) {
-      _themeModeNotifier.value = setting.themeMode;
+      _themeModeNotifier.value = normalizedTheme;
     }
+    unawaited(FocusNotificationService.instance.configureTimeZone(setting.timeZone));
+    unawaited(_refreshTaskReminders());
+    unawaited(_persistThemeMode(normalizedTheme));
     notifyListeners();
   }
 
@@ -211,6 +249,10 @@ class MyTimeStore extends ChangeNotifier {
     return _tasks.where((task) => task.isCompleted).length;
   }
 
+  int completedTaskCountForDate(DateTime date) {
+    return tasksForDate(date).where((task) => task.isCompletedOn(date)).length;
+  }
+
   void selectTask(FocusTask task) {
     _selectedTask = task;
     notifyListeners();
@@ -241,16 +283,27 @@ class MyTimeStore extends ChangeNotifier {
   UserProfile get profile => _profile;
 
   void updateProfile(UserProfile profile) {
-    final themeChanged = _profile.themeMode != profile.themeMode;
-    _profile = profile;
+    final normalizedTheme = AppTheme.normalizeMode(profile.themeMode);
+    final themeChanged = _profile.themeMode != normalizedTheme;
+    _profile = profile.copyWith(themeMode: normalizedTheme);
     _setting = _setting.copyWith(
       timeZone: profile.timeZone,
-      themeMode: profile.themeMode,
+      themeMode: normalizedTheme,
     );
     if (themeChanged) {
-      _themeModeNotifier.value = profile.themeMode;
+      _themeModeNotifier.value = normalizedTheme;
     }
+    unawaited(_persistThemeMode(normalizedTheme));
     notifyListeners();
+  }
+
+  Future<void> _persistThemeMode(String themeMode) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_themePreferenceKey, themeMode);
+  }
+
+  DateTime _dateOnly(DateTime value) {
+    return DateTime(value.year, value.month, value.day);
   }
 
   void upsertTaskFromApi(FocusTask updatedTask) {
@@ -265,6 +318,7 @@ class MyTimeStore extends ChangeNotifier {
       _selectedTask = updatedTask;
     }
 
+    unawaited(_refreshTaskReminders());
     notifyListeners();
   }
 
@@ -302,12 +356,14 @@ class MyTimeStore extends ChangeNotifier {
 
       _tasks.add(createdTask);
       _selectedTask = createdTask;
+      unawaited(_refreshTaskReminders());
       notifyListeners();
       return createdTask;
     }
 
     _tasks.add(task);
     _selectedTask = task;
+    unawaited(_refreshTaskReminders());
     notifyListeners();
     return task;
   }
@@ -387,6 +443,7 @@ class MyTimeStore extends ChangeNotifier {
       _selectedTask = _firstPlannedTask;
     }
 
+    unawaited(_refreshTaskReminders());
     notifyListeners();
   }
 
@@ -420,6 +477,7 @@ class MyTimeStore extends ChangeNotifier {
     if (identical(_selectedTask, task)) {
       _selectedTask = _firstPlannedTask;
     }
+    unawaited(_refreshTaskReminders());
     notifyListeners();
 
     final token = SessionStore.instance.token;
@@ -435,6 +493,7 @@ class MyTimeStore extends ChangeNotifier {
     } catch (error) {
       _tasks.insert(existingIndex, task);
       _selectedTask = previousSelectedTask;
+      unawaited(_refreshTaskReminders());
       notifyListeners();
       rethrow;
     }
@@ -443,6 +502,7 @@ class MyTimeStore extends ChangeNotifier {
   Future<FocusSessionResult> completeSession({
     required FocusTask task,
     required int elapsedSeconds,
+    required int plannedMinutes,
     required Set<int> completedIndexes,
     required int distractions,
     DateTime? occurrenceDate,
@@ -475,7 +535,7 @@ class MyTimeStore extends ChangeNotifier {
 
     final result = FocusSessionResult(
       taskTitle: task.title,
-      plannedMinutes: task.focusMinutes,
+      plannedMinutes: plannedMinutes,
       elapsedSeconds: elapsedSeconds,
       completedOutputs: completedTitles.length,
       totalOutputs: task.outputs.length,
@@ -505,8 +565,43 @@ class MyTimeStore extends ChangeNotifier {
       _selectedTask = _firstPlannedTask;
     }
     unawaited(loadSessionsFromApi());
+    unawaited(_refreshTaskReminders());
     notifyListeners();
     return result;
+  }
+
+  Future<void> restoreTaskSnapshot(FocusTask snapshot) async {
+    final existingIndex = _tasks.indexWhere((task) => task.id == snapshot.id);
+    if (existingIndex == -1) return;
+
+    final target = _tasks[existingIndex];
+    final previous = FocusTask.fromJson(target.toSnapshotJson());
+    _syncTaskFromRemote(target, snapshot);
+    target.completionDates = List<DateTime>.from(snapshot.completionDates);
+
+    notifyListeners();
+
+    final token = SessionStore.instance.token;
+    if (token == null || token.isEmpty) {
+      unawaited(_refreshTaskReminders());
+      return;
+    }
+
+    try {
+      final updatedTask = await FocusTaskApiService.instance.updateTask(
+        token: token,
+        task: target,
+      );
+      _syncTaskFromRemote(target, updatedTask);
+      target.completionDates = List<DateTime>.from(updatedTask.completionDates);
+      unawaited(_refreshTaskReminders());
+      notifyListeners();
+    } catch (error) {
+      _syncTaskFromRemote(target, previous);
+      target.completionDates = List<DateTime>.from(previous.completionDates);
+      notifyListeners();
+      rethrow;
+    }
   }
 
   void _syncTaskFromRemote(FocusTask target, FocusTask source) {
@@ -524,5 +619,9 @@ class MyTimeStore extends ChangeNotifier {
     target.syncToGoogleCalendar = source.syncToGoogleCalendar;
     target.status = source.status;
     target.completedAt = source.completedAt;
+  }
+
+  Future<void> _refreshTaskReminders() async {
+    await FocusNotificationService.instance.scheduleTaskReminders(_tasks);
   }
 }
